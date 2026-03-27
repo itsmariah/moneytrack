@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Login - MoneyTrack</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js"></script>
+</head>
+
+<body class="auth-page">
+
+  <div class="auth-container">
+
+    <div class="auth-card">
+      <h2>Entrar</h2>
+      <p class="subtitle">Acesse sua conta</p>
+
+      <form onsubmit="login(event)">
+        <input type="email" id="loginEmail" placeholder="E-mail" required>
+        <input type="password" id="loginSenha" placeholder="Senha" required>
+
+        <button type="submit" class="btn btn-primary">Entrar</button>
+      </form>
+
+      <p class="switch">
+        Não tem conta? <a href="cadastro.html">Cadastre-se</a>
+      </p>
+    </div>
+
+  </div>
+
+</body>
+</html>

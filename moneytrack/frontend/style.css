@@ -1,0 +1,373 @@
+/* LANDING PAGE */
+    /* RESET */
+    * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', sans-serif;
+    scroll-behavior: smooth;
+    }
+
+    /* BODY */
+    body {
+    background: linear-gradient(135deg, #0f172a, #020617);
+    color: #fff;
+    }
+
+    /* NAVBAR */
+    nav {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    background: rgba(15, 23, 42, 0.9);
+    backdrop-filter: blur(10px);
+    padding: 15px 0;
+    z-index: 1000;
+    }
+
+    nav ul {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    list-style: none;
+    }
+
+    nav a {
+    text-decoration: none;
+    color: #cbd5f5;
+    font-weight: 500;
+    transition: 0.3s;
+    }
+
+    nav a:hover {
+    color: #22c55e;
+    }
+
+    /* SECTIONS */
+    section {
+    min-height: 100vh;
+    padding: 120px 20px 60px;
+    text-align: center;
+    }
+
+    /* HOME (HERO) */
+    #home {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 20px;
+    }
+
+    #home h1 {
+    font-size: 3rem;
+    background: linear-gradient(90deg, #22c55e, #4ade80);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    }
+
+    #home p {
+    font-size: 1.2rem;
+    color: #cbd5f5;
+    }
+
+    /* BOTÕES */
+    /* BOTÃO BASE (PADRÃO DO SISTEMA) */
+    .btn {
+    display: inline-block;
+    padding: 10px 20px;
+    font-size: 0.95rem;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    text-align: center;
+    }
+
+    /* BOTÃO PRINCIPAL (verde padrão do sistema) */
+    .btn-primary {
+    background: linear-gradient(90deg, #22c55e, #16a34a);
+    color: white;
+    }
+
+    .btn-primary:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 15px rgba(34, 197, 94, 0.5);
+    }
+
+    /* BOTÃO SECUNDÁRIO */
+    .btn-secondary {
+    background: #1e293b;
+    color: #cbd5f5;
+    border: 1px solid #334155;
+    }
+
+    .btn-secondary:hover {
+    background: #334155;
+    }
+
+    /* BOTÃO PERIGO (excluir, logout, etc) */
+    .btn-danger {
+    background: #ef4444;
+    color: white;
+    }
+
+    .btn-danger:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
+    }
+
+    /* BOTÃO LANDING PAGE */
+        .cta-btn {
+    display: block;
+    width: fit-content; /* RESOLVE O PROBLEMA DE OVERSIZE */
+    margin: 20px auto 0; /* CENTRALIZA */
+    padding: 12px 24px;
+    }
+
+    /* FEATURES */
+    .features-container {
+    margin-top: 30px;
+    display: grid;
+    gap: 15px;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+    }
+
+    .feature-box {
+    background: rgba(30, 41, 59, 0.6);
+    padding: 15px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: 0.3s;
+    text-align: left;
+    }
+
+    .feature-box h3 {
+    color: #22c55e;
+    }
+
+    .feature-box p {
+    margin-top: 10px;
+    color: #cbd5f5;
+    display: none;
+    }
+
+    .feature-box.active {
+    background: rgba(34, 197, 94, 0.15);
+    }
+
+    .feature-box.active p {
+    display: block;
+    animation: fadeIn 0.3s ease-in-out;
+    }
+
+    /* animação */
+    @keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    }
+
+    /* ABOUT */
+    #about p {
+    max-width: 600px;
+    margin: auto;
+    line-height: 1.6;
+    color: #cbd5f5;
+    }
+
+    /* CONTACT */
+    #contact ul {
+    list-style: none;
+    margin-top: 15px;
+    }
+
+    #contact li {
+    margin: 10px 0;
+    color: #cbd5f5;
+    }
+
+    /* TITLES */
+    h2 {
+    font-size: 2rem;
+    margin-bottom: 10px;
+    color: #22c55e;
+    }
+
+    /* RESPONSIVO */
+    @media (max-width: 768px) {
+    nav ul {
+        gap: 20px;
+        font-size: 14px;
+    }
+
+    #home h1 {
+        font-size: 2rem;
+    }
+
+    section {
+        padding: 100px 15px;
+    }
+    }
+
+    /* FOOTER */
+    .footer {
+    background: #020617;
+    padding: 40px 20px 20px;
+    margin-top: 50px;
+    border-top: 1px solid #1e293b;
+    }
+
+    .footer-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 30px;
+    max-width: 1000px;
+    margin: auto;
+    }
+
+    .footer-section h3,
+    .footer-section h4 {
+    color: #22c55e;
+    margin-bottom: 10px;
+    }
+
+    .footer-section p {
+    color: #cbd5f5;
+    font-size: 14px;
+    }
+
+    .footer-section ul {
+    list-style: none;
+    }
+
+    .footer-section li {
+    margin-bottom: 8px;
+    color: #cbd5f5;
+    font-size: 14px;
+    }
+
+    .footer-section a {
+    text-decoration: none;
+    color: #cbd5f5;
+    transition: 0.3s;
+    }
+
+    .footer-section a:hover {
+    color: #22c55e;
+    }
+
+    /* COPYRIGHT */
+    .footer-bottom {
+    text-align: center;
+    margin-top: 30px;
+    padding-top: 15px;
+    border-top: 1px solid #1e293b;
+    font-size: 13px;
+    color: #64748b;
+    }
+
+    /* BACK TO TOP */
+    #backToTop {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    background: linear-gradient(90deg, #22c55e, #16a34a);
+    color: white;
+    border: none;
+    padding: 12px 16px;
+    font-size: 18px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: none;
+    box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
+    transition: all 0.3s ease;
+    z-index: 999;
+    }
+
+    #backToTop:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.6);
+    }
+/* FIM DO LANDING PAGE */
+
+/* LOGIN E REGISTER PAGE /*
+    /* PÁGINAS DE AUTENTICAÇÃO */
+    .auth-page {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #0f172a, #020617);
+    }
+
+    /* CONTAINER */
+    .auth-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    }
+
+    /* CARD */
+    .auth-card {
+    background: rgba(30, 41, 59, 0.9);
+    padding: 30px;
+    border-radius: 12px;
+    width: 320px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 0 30px rgba(0,0,0,0.3);
+    text-align: center;
+    }
+
+    /* TÍTULO */
+    .auth-card h2 {
+    margin-bottom: 5px;
+    }
+
+    .subtitle {
+    font-size: 14px;
+    color: #cbd5f5;
+    margin-bottom: 20px;
+    }
+
+    /* INPUTS */
+    .auth-card input {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 10px;
+    border: none;
+    border-radius: 8px;
+    background: #0f172a;
+    color: white;
+    outline: none;
+    }
+
+    /* BOTÃO */
+    .auth-card .btn {
+    width: 100%;
+    margin-top: 10px;
+    }
+
+    /* TROCA LOGIN/CADASTRO */
+    .switch {
+    margin-top: 15px;
+    font-size: 14px;
+    }
+
+    .switch a {
+    color: #22c55e;
+    text-decoration: none;
+    }
+
+    .switch a:hover {
+    text-decoration: underline;
+    }

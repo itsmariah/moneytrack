@@ -1,0 +1,33 @@
+# 💰 MoneyTrack
+
+Sistema de gestão financeira pessoal desenvolvido para auxiliar usuários no controle de receitas, despesas e análise financeira.
+
+## 🚀 Funcionalidades
+
+- Cadastro e login de usuários
+- Registro de receitas e despesas
+- Controle de saldo
+- Interface moderna e responsiva
+
+## 🛠️ Tecnologias
+FRONTEND
+- HTML
+- CSS
+- JavaScript
+BACKEND
+-   
+- 
+- 
+BANCO
+- 
+
+## ⚠️ Observações
+
+Atualmente o sistema utiliza localStorage para simulação de dados. Futuramente será integrado com backend e banco de dados.
+
+## 👥 Equipe
+
+- Maria Mariah Queiroga
+- Jefferson Fidelis
+- Diogo de Souza
+- Weslley Batista

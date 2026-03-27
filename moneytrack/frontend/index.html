@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  
+<head>
+  <meta charset="UTF-8">
+  <title>MoneyTrack - Landing Page</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js"></script>
+
+</head>
+
+<body>
+  <nav>
+    <ul>
+      <li><a href="#home">Início</a></li>
+      <li><a href="#features">Recursos</a></li>
+      <li><a href="#about">Sobre</a></li>
+      <li><a href="#contact">Suporte</a></li>
+      <li><button class="btn btn-primary" onclick="window.location.href='login.html'">Entrar</button></li>
+    </ul>
+  </nav>
+
+  <section id="home">
+    <h1>Bem-vindo ao MoneyTrack</h1>
+    <p>Gerencie suas finanças de forma fácil e eficiente.</p>
+    <button class="btn btn-primary cta-btn" onclick="window.location.href='register.html'">Cadastre-se Agora</button>
+  </section>
+
+  <section id="features">
+    <h2>Recursos</h2>
+
+    <div class="features-container">
+
+      <div class="feature-box" onclick="toggleFeature(this)">
+        <h3>Controle de despesas e receitas</h3>
+        <p>Esteja no controle da sua vida financeira, acompanhando ganhos e gastos de forma simples e intuitiva.</p>
+      </div>
+
+      <div class="feature-box" onclick="toggleFeature(this)">
+        <h3>Gráficos de análise financeira</h3>
+        <p>Visualize seus gastos com gráficos claros que ajudam na tomada de decisões.</p>
+      </div>
+
+      <div class="feature-box" onclick="toggleFeature(this)">
+        <h3>Alertas de orçamento</h3>
+        <p>Receba notificações quando estiver perto de atingir seus limites financeiros.</p>
+      </div>
+
+      <div class="feature-box" onclick="toggleFeature(this)">
+        <h3>Integração com bancos</h3>
+        <p>Conecte suas contas e automatize o acompanhamento das suas finanças.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <section id="about">
+    <h2>Sobre o MoneyTrack</h2>
+    <p>O MoneyTrack é um aplicativo de gerenciamento financeiro pessoal desenvolvido para ajudar os usuários
+     a manterem suas finanças organizadas e sob controle. Com uma interface intuitiva e recursos poderosos,
+     o MoneyTrack é a escolha ideal para quem deseja melhorar sua saúde financeira.
+    </p>
+  </section>
+
+  <section id="contact">
+    <h2>Suporte</h2>
+    <p>Se você tiver alguma dúvida ou precisar de ajuda, entre em contato conosco:</p>
+    <ul>
+      <li>Email: suporte@moneytrack.com</li>
+      <li>Telefone: (11) 1234-5678</li>
+    </ul>
+  </section>
+
+<footer class="footer">
+  <div class="footer-container">
+
+    <!-- LOGO / DESCRIÇÃO -->
+    <div class="footer-section">
+      <h3>💰 MoneyTrack</h3>
+      <p>Controle suas finanças de forma simples, inteligente e eficiente.</p>
+    </div>
+
+    <!-- LINKS -->
+    <div class="footer-section">
+      <h4>Links</h4>
+      <ul>
+        <li><a href="#home">Início</a></li>
+        <li><a href="#features">Recursos</a></li>
+        <li><a href="#about">Sobre</a></li>
+        <li><a href="#contact">Suporte</a></li>
+      </ul>
+    </div>
+
+    <!-- CONTATO -->
+    <div class="footer-section">
+      <h4>Contato</h4>
+      <ul>
+        <li>Email: suporte@moneytrack.com</li>
+        <li>Telefone: (11) 1234-5678</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <!-- COPYRIGHT -->
+  <div class="footer-bottom">
+    <p>© 2026 MoneyTrack. Todos os direitos reservados.</p>
+  </div>
+</footer>
+
+<button id="backToTop">↑</button>
+
+</body>
+</html>
