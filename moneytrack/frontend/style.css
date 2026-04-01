@@ -50,6 +50,11 @@
     text-align: center;
     }
 
+    section, nav {
+    position: relative;
+    z-index: 1;
+    }
+
     /* HOME (HERO) */
     #home {
     display: flex;
@@ -297,6 +302,42 @@
     transform: scale(1.1);
     box-shadow: 0 0 20px rgba(34, 197, 94, 0.6);
     }
+
+    /* ANIAÇÃO DO BACKGROUND */
+    /* FUNDO ANIMADO */
+    .money-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    overflow: hidden;
+    }
+
+    /* ELEMENTOS ($) */
+    .money-bg span {
+    position: absolute;
+    bottom: -50px;
+    color: rgba(34, 197, 94, 0.35);
+    font-weight: bold;
+    animation: subir linear infinite;
+    }
+
+    /* ANIMAÇÃO */
+    @keyframes subir {
+    from {
+        transform: translateY(0);
+        opacity: 0;
+    }
+    20% {
+        opacity: 1;
+    }
+    to {
+        transform: translateY(-110vh);
+        opacity: 0;
+    }
+    }
 /* FIM DO LANDING PAGE */
 
 /* LOGIN E REGISTER PAGE /*
@@ -370,4 +411,129 @@
 
     .switch a:hover {
     text-decoration: underline;
+    }
+/* FIM LOGIN E REGISTER PAGE */
+
+/* DASHBOARD */
+    .dashboard {
+    padding: 100px 20px;
+    max-width: 1000px;
+    margin: auto;
+    }
+
+    /* HEADER */
+    .dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    }
+
+    .dashboard-header h2 {
+    color: #22c55e;
+    text-shadow: 0 0 10px rgba(34, 197, 94, 0.3);
+    }
+
+    /* SALDO */
+    .balance-card {
+    background: linear-gradient(90deg, #22c55e, #16a34a);
+    padding: 20px;
+    border-radius: 12px;
+    text-align: center;
+    margin-bottom: 20px;
+    }
+
+    .balance-card h3 {
+    margin-bottom: 5px;
+    }
+
+    #balance {
+    font-size: 2.5rem;
+    font-weight: bold;
+    text-shadow: 0 0 20px rgba(255,255,255,0.2);
+    }
+
+    /* FORM */
+    .form-card {
+    background: linear-gradient(145deg, rgba(30,41,59,0.7), rgba(15,23,42,0.9));
+    padding: 25px;
+    border-radius: 16px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(34, 197, 94, 0.15);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    transition: all 0.3s ease;
+    }
+
+    /* HOVER */
+    .form-card:hover {
+    transform: translateY(-8px) scale(1.01);
+    box-shadow: 0 0 50px rgba(34, 197, 94, 0.25);
+    }
+
+    /* FORM GRID */
+    .form-card form {
+    display: grid;
+    gap: 12px;
+    }
+
+    /* INPUTS E SELECT */
+    .form-card input,
+    .form-card select {
+    padding: 14px;
+    border-radius: 10px;
+    border: 1px solid #1e293b;
+    background: #020617;
+    color: white;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    }
+
+    /* FOCO */
+    .form-card input:focus,
+    .form-card select:focus {
+    border: 1px solid #22c55e;
+    box-shadow: 0 0 12px rgba(34, 197, 94, 0.5);
+    outline: none;
+    transform: scale(1.02);
+    }
+    .form-card .btn {
+    margin-top: 5px;
+    }
+
+    /* GRID */
+    .content-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    }
+
+    /* TRANSAÇÕES */
+    .transactions-card {
+    background: rgba(30, 41, 59, 0.8);
+    padding: 20px;
+    border-radius: 12px;
+    }
+
+    .transactions-card ul {
+    list-style: none;
+    margin-top: 10px;
+    }
+
+    .transactions-card li {
+    padding: 10px;
+    border-bottom: 1px solid #334155;
+    }
+
+    /* GRÁFICO */
+    .chart-card {
+    background: rgba(30, 41, 59, 0.8);
+    padding: 20px;
+    border-radius: 12px;
+    }
+
+    /* RESPONSIVO */
+    @media (max-width: 768px) {
+    .content-grid {
+        grid-template-columns: 1fr;
+    }
     }
