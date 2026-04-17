@@ -16,9 +16,21 @@
       <button class="btn btn-danger" onclick="logout()">Sair</button>
     </header>
 
-    <div class="balance-card">
-      <h3>Saldo Atual</h3>
-      <p id="balance">R$ 0.00</p>
+    <div class="summary-cards">
+      <div class="summary-card income">
+        <h3>Receitas</h3>
+        <p id="totalReceitas">R$ 0.00</p>
+      </div>
+
+      <div class="summary-card expense">
+        <h3>Despesas</h3>
+        <p id="totalDespesas">R$ 0.00</p>
+      </div>
+
+      <div class="summary-card balance">
+        <h3>Saldo Atual</h3>
+        <p id="balance">R$ 0.00</p>
+      </div>
     </div>
 
     <div class="form-card">
@@ -27,10 +39,22 @@
       <form onsubmit="handleTransaction(event)">
         <input type="text" id="descricao" placeholder="Descrição" required>
         <input type="number" id="valor" placeholder="Valor" required>
+        <input type="date" id="data" required>
 
-        <select id="tipo">
+        <select id="tipo" required>
+          <option value="">Selecione o tipo</option>
           <option value="receita">Receita</option>
           <option value="despesa">Despesa</option>
+        </select>
+
+        <select id="categoria" required>
+          <option value="">Selecione a categoria</option>
+          <option value="Salário">Salário</option>
+          <option value="Alimentação">Alimentação</option>
+          <option value="Transporte">Transporte</option>
+          <option value="Lazer">Lazer</option>
+          <option value="Saúde">Saúde</option>
+          <option value="Outros">Outros</option>
         </select>
 
         <button class="btn btn-primary">Adicionar</button>
@@ -38,9 +62,27 @@
     </div>
 
     <div class="content-grid">
-
       <div class="transactions-card">
         <h3>Transações</h3>
+
+        <div class="filters">
+          <select id="filterTipo" onchange="renderTransactions()">
+            <option value="">Todos os tipos</option>
+            <option value="receita">Receitas</option>
+            <option value="despesa">Despesas</option>
+          </select>
+
+          <select id="filterCategoria" onchange="renderTransactions()">
+            <option value="">Todas as categorias</option>
+            <option value="Salário">Salário</option>
+            <option value="Alimentação">Alimentação</option>
+            <option value="Transporte">Transporte</option>
+            <option value="Lazer">Lazer</option>
+            <option value="Saúde">Saúde</option>
+            <option value="Outros">Outros</option>
+          </select>
+        </div>
+
         <ul id="transactionsList"></ul>
       </div>
 
@@ -48,11 +90,11 @@
         <h3>Resumo</h3>
         <canvas id="myChart"></canvas>
       </div>
-
     </div>
 
   </div>
 
-  <script src="script.js"></script>
+ <script src="js/auth.js"></script>
+<script src="js/dashboard.js"></script>
 </body>
 </html>
