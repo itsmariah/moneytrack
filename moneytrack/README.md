@@ -150,12 +150,17 @@ Gestão de transações financeiras
 - Weslley Batista
 
 ```md
-## 📸 Preview
+## 📸 Preview 
 
-![Landing](/frontend/assets/imagens/ladingpage_inicio.png)
-![Lading](/frontend/assets/imagens/landingpage_recursos2.png)
-![Dashboard](/frontend/assets/imagens/dashboard_1.png)
-![Dashboard](./frontend/assets/imagens/dashboard_2.png)
+### Landing Page
+![Landing](./assets/imagens/landingpage_inicio.png)
+
+### Recursos
+![Recursos](./assets/imagens/landingpage_recursos2.png)
+
+### Dashboard
+![Dashboard](./assets/imagens/dashboard_1.png)
+![Dashboard](./assets/imagens/dashboard_2.png)
 
 
 ## Considerações Finais
