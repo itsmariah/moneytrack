@@ -1,6 +1,12 @@
 import axios from 'axios'
 
-const api = axios.create({ baseURL: '/api' })
+// When loaded from file:// (Electron production), use absolute URL
+const baseURL =
+  window.location.protocol === 'file:'
+    ? 'http://localhost:3001/api'
+    : '/api'
+
+const api = axios.create({ baseURL })
 
 const token = localStorage.getItem('token')
 if (token) {

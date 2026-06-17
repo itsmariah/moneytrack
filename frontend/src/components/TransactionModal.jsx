@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import api from '../services/api'
-
-const CATEGORIES = ['Salário', 'Alimentação', 'Transporte', 'Lazer', 'Saúde', 'Educação', 'Moradia', 'Outros']
+import { categoriasPorTipo } from '../utils/categories'
 
 export default function TransactionModal({ transaction, onClose, onSaved }) {
   const [form, setForm] = useState({
@@ -25,6 +24,14 @@ export default function TransactionModal({ transaction, onClose, onSaved }) {
       })
     }
   }, [transaction])
+
+  // Reset categoria quando tipo muda, caso a categoria atual não exista no novo tipo
+  useEffect(() => {
+    const cats = categoriasPorTipo(form.tipo)
+    if (!cats.includes(form.categoria)) {
+      setForm(f => ({ ...f, categoria: cats[0] }))
+    }
+  }, [form.tipo])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -95,7 +102,7 @@ export default function TransactionModal({ transaction, onClose, onSaved }) {
               value={form.categoria}
               onChange={e => setForm({ ...form, categoria: e.target.value })}
             >
-              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              {categoriasPorTipo(form.tipo).map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
 

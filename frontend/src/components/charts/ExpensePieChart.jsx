@@ -3,9 +3,9 @@ import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recha
 const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#eab308', '#22c55e', '#14b8a6']
 const fmt = (n) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n)
 
-export default function ExpensePieChart({ data }) {
+export default function ExpensePieChart({ data, emptyMessage = 'Nenhum dado registrado' }) {
   if (!data || data.length === 0) {
-    return <div className="empty-chart">Nenhuma despesa registrada</div>
+    return <div className="empty-chart">{emptyMessage}</div>
   }
 
   return (

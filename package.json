@@ -1,9 +1,51 @@
 {
   "name": "moneytrack",
   "version": "1.0.0",
+  "main": "electron/main.js",
   "scripts": {
     "backend": "cd backend && npm run dev",
     "frontend": "cd frontend && npm run dev",
-    "install:all": "cd backend && npm install && cd ../frontend && npm install"
+    "install:all": "cd backend && npm install && cd ../frontend && npm install",
+    "electron:start": "wait-on http://localhost:5173 && cross-env NODE_ENV=development electron .",
+    "electron:dev": "concurrently -k -n backend,frontend,electron -c blue,green,yellow \"npm run backend\" \"npm run frontend\" \"npm run electron:start\"",
+    "electron:build": "cd frontend && npm run build && cd .. && electron-builder",
+    "electron:pack": "cd frontend && npm run build && cd .. && electron-builder --dir"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.moneytrack.app",
+    "productName": "MoneyTrack",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "electron/**/*",
+      "frontend/dist/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "backend",
+        "to": "backend",
+        "filter": [
+          "**/*",
+          "!node_modules/.cache"
+        ]
+      }
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
   }
 }

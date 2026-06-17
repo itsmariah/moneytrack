@@ -6,8 +6,9 @@ import SummaryCards from '../components/SummaryCards'
 import TransactionModal from '../components/TransactionModal'
 import TransactionList from '../components/TransactionList'
 import ExpensePieChart from '../components/charts/ExpensePieChart'
+import OFXImportModal from '../components/OFXImportModal'
 
-const CATEGORIES = ['Salário', 'Alimentação', 'Transporte', 'Lazer', 'Saúde', 'Educação', 'Moradia', 'Outros']
+import { TODAS_CATEGORIAS } from '../utils/categories'
 
 export default function Dashboard() {
   const { user } = useAuth()
@@ -16,6 +17,7 @@ export default function Dashboard() {
   const [categoryData, setCategoryData] = useState([])
   const [filters, setFilters] = useState({ tipo: '', categoria: '', data_inicio: '', data_fim: '' })
   const [showModal, setShowModal] = useState(false)
+  const [showOFXModal, setShowOFXModal] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -79,15 +81,24 @@ export default function Dashboard() {
     .filter(d => d.tipo === 'despesa')
     .map(d => ({ name: d.categoria, value: d.total }))
 
+  const receitasByCategory = categoryData
+    .filter(d => d.tipo === 'receita')
+    .map(d => ({ name: d.categoria, value: d.total }))
+
   return (
     <div className="app-layout">
       <Navbar />
       <main className="main-content">
         <div className="dashboard-header">
           <h2>Olá, {user?.nome?.split(' ')[0]} 👋</h2>
-          <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-            + Nova Transação
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-outline" onClick={() => setShowOFXModal(true)}>
+              ↓ Importar OFX
+            </button>
+            <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+              + Nova Transação
+            </button>
+          </div>
         </div>
 
         <SummaryCards balance={balance} />
@@ -104,7 +115,7 @@ export default function Dashboard() {
                 </select>
                 <select value={filters.categoria} onChange={e => setFilters({ ...filters, categoria: e.target.value })}>
                   <option value="">Todas as categorias</option>
-                  {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  {TODAS_CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
                 <input
                   type="date"
@@ -137,9 +148,15 @@ export default function Dashboard() {
             )}
           </div>
 
-          <div className="chart-section">
-            <h3>Gastos por Categoria</h3>
-            <ExpensePieChart data={despesasByCategory} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            <div className="chart-section">
+              <h3>Gastos por Categoria</h3>
+              <ExpensePieChart data={despesasByCategory} emptyMessage="Nenhuma despesa registrada" />
+            </div>
+            <div className="chart-section">
+              <h3>Fontes de Renda</h3>
+              <ExpensePieChart data={receitasByCategory} emptyMessage="Nenhuma receita registrada" />
+            </div>
           </div>
         </div>
       </main>
@@ -149,6 +166,13 @@ export default function Dashboard() {
           transaction={editingTransaction}
           onClose={handleModalClose}
           onSaved={handleSaved}
+        />
+      )}
+
+      {showOFXModal && (
+        <OFXImportModal
+          onClose={() => setShowOFXModal(false)}
+          onImported={fetchData}
         />
       )}
     </div>

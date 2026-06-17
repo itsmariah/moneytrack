@@ -6,6 +6,7 @@
 ![Frontend](https://img.shields.io/badge/frontend-React%20%7C%20Vite-61dafb)
 ![Backend](https://img.shields.io/badge/backend-Node.js%20%7C%20Express-green)
 ![Database](https://img.shields.io/badge/banco-SQLite%20%7C%20Prisma-blue)
+![Desktop](https://img.shields.io/badge/desktop-Electron-47848f)
 
 ---
 
@@ -24,7 +25,7 @@
 
 ## 📖 Sobre o projeto
 
-O **MoneyTrack** é uma aplicação web de gestão financeira pessoal que permite ao usuário registrar receitas e despesas, visualizar o saldo atualizado automaticamente, filtrar transações e gerar relatórios mensais com gráficos.
+O **MoneyTrack** é uma aplicação de gestão financeira pessoal que permite ao usuário registrar receitas e despesas, visualizar o saldo atualizado automaticamente, filtrar transações, importar extratos bancários (OFX) e gerar relatórios mensais com gráficos. Pode ser executado como aplicação web ou como **app desktop** via Electron.
 
 ---
 
@@ -34,10 +35,15 @@ O **MoneyTrack** é uma aplicação web de gestão financeira pessoal que permit
 - Adicionar, editar e excluir transações
 - Saldo calculado automaticamente
 - Filtros por tipo, categoria e período de data
-- Gráfico de despesas por categoria (rosca)
-- Relatório mensal com gráfico de evolução (últimos 6 meses)
+- **Importação de extratos bancários em formato OFX** com preview e edição de categorias antes de confirmar
+- Categorias separadas por tipo (receitas e despesas) com auto-categorização no OFX
+- Gráfico de **despesas** por categoria (rosca)
+- Gráfico de **fontes de renda** por categoria (rosca)
+- Relatório mensal com filtros de tipo e categoria
+- Gráfico de evolução mensal (últimos 6 meses)
 - Edição de perfil (nome, e-mail, senha)
 - Interface responsiva (funciona no celular)
+- **Aplicação desktop** empacotável via Electron
 
 ---
 
@@ -53,6 +59,7 @@ O **MoneyTrack** é uma aplicação web de gestão financeira pessoal que permit
 | Banco de dados | SQLite (via Prisma ORM) |
 | Autenticação | JWT (JSON Web Token) |
 | Criptografia | bcryptjs |
+| Desktop | Electron 31 + electron-builder |
 
 ---
 
@@ -61,48 +68,56 @@ O **MoneyTrack** é uma aplicação web de gestão financeira pessoal que permit
 ```
 moneytrack/
 │
-├── backend/                        ← API REST (Node.js + Express)
+├── electron/                           ← App desktop (Electron)
+│   ├── main.js                         ← Processo principal: inicia backend e janela
+│   └── preload.js                      ← Bridge segura entre main e renderer
+│
+├── backend/                            ← API REST (Node.js + Express)
 │   ├── prisma/
-│   │   ├── schema.prisma           ← Modelos do banco de dados
-│   │   └── dev.db                  ← Banco SQLite (gerado automaticamente)
+│   │   ├── schema.prisma               ← Modelos do banco de dados
+│   │   └── dev.db                      ← Banco SQLite (gerado automaticamente)
 │   ├── database/
-│   │   └── db.js                   ← Conexão com o banco (Prisma Client)
+│   │   └── db.js                       ← Conexão com o banco (Prisma Client)
 │   ├── middleware/
-│   │   └── auth.js                 ← Verificação do token JWT
+│   │   └── auth.js                     ← Verificação do token JWT
 │   ├── routes/
-│   │   ├── auth.js                 ← Cadastro, login, editar perfil
-│   │   ├── transactions.js         ← CRUD de transações
-│   │   └── reports.js              ← Saldo, relatórios, gráficos
-│   ├── server.js                   ← Ponto de entrada da API
-│   ├── .env                        ← Variáveis de ambiente (não vai pro git)
+│   │   ├── auth.js                     ← Cadastro, login, editar perfil
+│   │   ├── transactions.js             ← CRUD de transações + importação bulk
+│   │   └── reports.js                  ← Saldo, relatórios, gráficos
+│   ├── server.js                       ← Ponto de entrada da API
+│   ├── .env                            ← Variáveis de ambiente (não vai pro git)
 │   └── package.json
 │
-└── frontend/                       ← Interface React
+└── frontend/                           ← Interface React
     ├── src/
     │   ├── pages/
-    │   │   ├── Landing.jsx         ← Página inicial
-    │   │   ├── Login.jsx           ← Tela de login
-    │   │   ├── Register.jsx        ← Tela de cadastro
-    │   │   ├── Dashboard.jsx       ← Painel principal
-    │   │   └── Reports.jsx         ← Relatórios mensais
+    │   │   ├── Landing.jsx             ← Página inicial
+    │   │   ├── Login.jsx               ← Tela de login
+    │   │   ├── Register.jsx            ← Tela de cadastro
+    │   │   ├── Dashboard.jsx           ← Painel principal
+    │   │   └── Reports.jsx             ← Relatórios mensais com filtros
     │   ├── components/
-    │   │   ├── Navbar.jsx          ← Barra de navegação
-    │   │   ├── SummaryCards.jsx    ← Cards de saldo/receitas/despesas
-    │   │   ├── TransactionModal.jsx← Modal de adicionar/editar transação
-    │   │   ├── TransactionList.jsx ← Lista de transações
-    │   │   ├── ProfileModal.jsx    ← Modal de editar perfil
-    │   │   ├── PrivateRoute.jsx    ← Proteção de rotas autenticadas
+    │   │   ├── Navbar.jsx              ← Barra de navegação
+    │   │   ├── SummaryCards.jsx        ← Cards de saldo/receitas/despesas
+    │   │   ├── TransactionModal.jsx    ← Modal de adicionar/editar transação
+    │   │   ├── TransactionList.jsx     ← Lista de transações
+    │   │   ├── OFXImportModal.jsx      ← Modal de importação de extrato OFX
+    │   │   ├── ProfileModal.jsx        ← Modal de editar perfil
+    │   │   ├── PrivateRoute.jsx        ← Proteção de rotas autenticadas
     │   │   └── charts/
-    │   │       └── ExpensePieChart.jsx ← Gráfico de pizza
+    │   │       └── ExpensePieChart.jsx ← Gráfico de pizza (despesas e receitas)
     │   ├── context/
-    │   │   └── AuthContext.jsx     ← Estado global de autenticação
+    │   │   └── AuthContext.jsx         ← Estado global de autenticação
     │   ├── services/
-    │   │   └── api.js              ← Configuração do Axios (HTTP)
-    │   ├── App.jsx                 ← Rotas da aplicação
-    │   ├── main.jsx                ← Ponto de entrada React
-    │   └── index.css               ← Estilos globais (tema escuro)
-    ├── index.html                  ← HTML base (Vite)
-    ├── vite.config.js              ← Configuração do Vite
+    │   │   └── api.js                  ← Configuração do Axios (suporta file://)
+    │   ├── utils/
+    │   │   ├── categories.js           ← Categorias por tipo (fonte única)
+    │   │   └── ofxParser.js            ← Parser de arquivos OFX (SGML e XML)
+    │   ├── App.jsx                     ← Rotas da aplicação
+    │   ├── main.jsx                    ← Ponto de entrada React
+    │   └── index.css                   ← Estilos globais (tema escuro)
+    ├── index.html                      ← HTML base (Vite)
+    ├── vite.config.js                  ← Configuração do Vite (base: './')
     └── package.json
 ```
 
@@ -112,7 +127,7 @@ moneytrack/
 
 ### Pré-requisitos
 
-- [Node.js](https://nodejs.org/) versão 18 ou superior instalado
+- [Node.js](https://nodejs.org/) versão 18 ou superior
 - Git instalado
 
 ### Passo 1 — Clonar o repositório
@@ -122,47 +137,52 @@ git clone https://github.com/itsmariah/moneytrack.git
 cd moneytrack
 ```
 
-### Passo 2 — Configurar e rodar o backend
+### Passo 2 — Instalar dependências
 
-Abra um terminal e execute:
+```bash
+# Instala tudo de uma vez (backend + frontend)
+npm run install:all
+
+# Instala as dependências do Electron (pasta raiz)
+npm install
+```
+
+### Passo 3 — Criar o banco de dados
 
 ```bash
 cd backend
-npm install
 npx prisma migrate dev --name init
-npm run dev
 ```
 
-O terminal vai mostrar:
-```
-MoneyTrack API rodando em http://localhost:3001
-```
+> Só precisa rodar na primeira vez. Cria o arquivo `backend/prisma/dev.db`.
 
-> O comando `prisma migrate dev` cria o banco de dados SQLite automaticamente.
-> Só precisa rodar na primeira vez.
+### Passo 4 — Rodar como aplicação web
 
-### Passo 3 — Configurar e rodar o frontend
-
-Abra **outro terminal** (sem fechar o primeiro) e execute:
+Abra dois terminais:
 
 ```bash
-cd frontend
-npm install
-npm run dev
+# Terminal 1 — Backend (porta 3001)
+cd backend && npm run dev
+
+# Terminal 2 — Frontend (porta 5173)
+cd frontend && npm run dev
 ```
 
-O terminal vai mostrar:
+Acesse: **http://localhost:5173**
+
+### Passo 4 (alternativo) — Rodar como app desktop (Electron)
+
+```bash
+# Da pasta raiz, inicia backend + frontend + Electron ao mesmo tempo
+npm run electron:dev
 ```
-  VITE v5.x.x  ready in xxx ms
-  ➜  Local:   http://localhost:5173/
+
+### Empacotar como instalador
+
+```bash
+# Gera instalador .exe (Windows) em dist-electron/
+npm run electron:build
 ```
-
-### Passo 4 — Acessar o sistema
-
-Abra o navegador em: **http://localhost:5173**
-
-> Os dois terminais precisam estar abertos ao mesmo tempo.
-> O backend (porta 3001) e o frontend (porta 5173) rodam em paralelo.
 
 ---
 
@@ -185,6 +205,7 @@ Base URL: `http://localhost:3001/api`
 |--------|------|-----------|------|
 | GET | `/transactions` | Listar transações (com filtros) | Sim |
 | POST | `/transactions` | Criar transação | Sim |
+| POST | `/transactions/bulk` | Importar lote de transações (OFX) | Sim |
 | PUT | `/transactions/:id` | Editar transação | Sim |
 | DELETE | `/transactions/:id` | Excluir transação | Sim |
 
@@ -205,39 +226,26 @@ Base URL: `http://localhost:3001/api`
 | GET | `/reports/categories` | Totais por categoria e tipo | Sim |
 | GET | `/reports/evolution` | Evolução dos últimos 6 meses | Sim |
 
-### Exemplo de uso
+---
 
-**Cadastrar usuário:**
-```json
-POST /api/auth/register
-{
-  "nome": "Jefferson",
-  "email": "jeff@email.com",
-  "senha": "minhasenha"
-}
-```
+## 📂 Categorias disponíveis
 
-**Resposta:**
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIs...",
-  "user": { "id": 1, "nome": "Jefferson", "email": "jeff@email.com" }
-}
-```
+| Receitas | Despesas |
+|----------|----------|
+| Salário | Alimentação |
+| Freelance | Delivery |
+| Venda | Transporte |
+| Investimentos | Moradia |
+| Aluguel recebido | Saúde |
+| Outros | Educação |
+| | Lazer |
+| | Pets |
+| | Viagem |
+| | Vestuário |
+| | Assinaturas |
+| | Outros |
 
-**Criar transação** (com o token no header):
-```json
-POST /api/transactions
-Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
-
-{
-  "tipo": "despesa",
-  "valor": 45.90,
-  "categoria": "Alimentação",
-  "descricao": "Almoço",
-  "data": "2026-05-21"
-}
-```
+> Definidas centralmente em `frontend/src/utils/categories.js`. O dropdown de categoria no formulário de transação muda automaticamente conforme o tipo selecionado.
 
 ---
 
@@ -284,7 +292,7 @@ O banco é um arquivo SQLite criado automaticamente em `backend/prisma/dev.db`.
 ## 🔄 Fluxo da aplicação
 
 ```
-Usuário abre o navegador
+Usuário abre o app (web ou desktop)
         ↓
 Landing Page (/)
         ↓
@@ -296,27 +304,19 @@ Dashboard (/dashboard)
     ├── Ver saldo, receitas e despesas
     ├── Adicionar / editar / excluir transações
     ├── Filtrar por tipo, categoria e data
-    └── Ver gráfico de gastos por categoria
+    ├── Importar extrato bancário (.ofx)
+    ├── Gráfico de gastos por categoria
+    └── Gráfico de fontes de renda
         ↓
 Relatórios (/relatorios)
     ├── Selecionar mês
-    ├── Ver resumo do mês
-    ├── Gráfico de barras (últimos 6 meses)
-    └── Gráfico de pizza (despesas por categoria)
+    ├── Filtrar por tipo (Todos / Receitas / Despesas)
+    ├── Filtrar por categoria
+    ├── Ver resumo do período filtrado
+    ├── Gráfico de barras — evolução dos últimos 6 meses
+    ├── Gráfico de pizza — despesas por categoria
+    └── Gráfico de pizza — fontes de renda
 ```
-
----
-
-## 📸 Preview (versão anterior)
-
-> As imagens abaixo mostram a versão inicial do projeto (HTML/CSS/JS puro).
-> A versão atual usa React com design atualizado.
-
-**Landing Page**
-![Landing](./frontend/assets/imagens/ladingpage_inicio.png)
-
-**Dashboard**
-![Dashboard](./frontend/assets/imagens/dashboard_1.png)
 
 ---
 
@@ -337,6 +337,10 @@ Relatórios (/relatorios)
 | RF11 | Categorizar transações | ✅ |
 | RF12 | Relatório mensal | ✅ |
 | RF13 | Gráfico de gastos por categoria | ✅ |
+| RF14 | Importação de extrato OFX | ✅ |
+| RF15 | Filtros na página de relatórios | ✅ |
+| RF16 | Gráfico de fontes de renda | ✅ |
+| RF17 | Versão desktop (Electron) | ✅ |
 
 ---
 
@@ -344,4 +348,4 @@ Relatórios (/relatorios)
 
 - O arquivo `.env` **não vai para o Git** (está no `.gitignore`). Cada desenvolvedor cria o seu.
 - O banco `dev.db` também **não vai para o Git**. É criado localmente com `prisma migrate dev`.
-- Os dois servidores precisam estar rodando ao mesmo tempo para o sistema funcionar.
+- Os dois servidores precisam estar rodando ao mesmo tempo para o sistema funcionar (exceto no modo Electron, que gerencia isso automaticamente).

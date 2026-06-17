@@ -29,6 +29,40 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Importação em lote (OFX)
+router.post('/bulk', async (req, res) => {
+  try {
+    const { transactions } = req.body;
+    if (!Array.isArray(transactions) || transactions.length === 0) {
+      return res.status(400).json({ error: 'Lista de transações inválida' });
+    }
+    for (const t of transactions) {
+      if (!t.tipo || !t.valor || !t.categoria || !t.data) {
+        return res.status(400).json({ error: 'Campos obrigatórios por transação: tipo, valor, categoria, data' });
+      }
+      if (!['receita', 'despesa'].includes(t.tipo)) {
+        return res.status(400).json({ error: 'Tipo deve ser receita ou despesa' });
+      }
+      if (Number(t.valor) <= 0) {
+        return res.status(400).json({ error: 'Valor deve ser maior que zero' });
+      }
+    }
+    const created = await prisma.transacao.createMany({
+      data: transactions.map(t => ({
+        usuarioId: req.userId,
+        tipo: t.tipo,
+        valor: Number(t.valor),
+        categoria: t.categoria,
+        descricao: t.descricao || '',
+        data: t.data,
+      })),
+    });
+    res.status(201).json({ count: created.count });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao importar transações' });
+  }
+});
+
 // RF04/RF05 - Cadastrar receita ou despesa
 router.post('/', async (req, res) => {
   try {
