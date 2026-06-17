@@ -47,6 +47,19 @@ O **MoneyTrack** é uma aplicação de gestão financeira pessoal que permite ao
 
 ---
 
+## 📸 Preview
+
+**Landing Page**
+![Landing Page](./frontend/assets/imagens/moneytrack_landing.png)
+
+**Dashboard**
+![Dashboard](./frontend/assets/imagens/moneytrack_dashboard.png)
+
+**Relatórios**
+![Relatórios](./frontend/assets/imagens/moneytrack_relatorio.png)
+
+---
+
 ## 🛠 Tecnologias
 
 | Camada | Tecnologia |
