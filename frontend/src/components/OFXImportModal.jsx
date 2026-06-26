@@ -1,15 +1,18 @@
 import { useState, useRef, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { readOFXFile, parseOFX } from '../utils/ofxParser'
 import { TODAS_CATEGORIAS } from '../utils/categories'
 import api from '../services/api'
 const fmt = (n) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n)
 
 export default function OFXImportModal({ onClose, onImported }) {
+  const navigate = useNavigate()
   const [step, setStep]               = useState('upload') // upload | preview | done
   const [transactions, setTransactions] = useState([])
   const [error, setError]             = useState('')
   const [importing, setImporting]     = useState(false)
   const [importedCount, setImportedCount] = useState(0)
+  const [importedMonth, setImportedMonth] = useState(null)
   const [dragging, setDragging]       = useState(false)
   const inputRef = useRef(null)
 
@@ -53,6 +56,14 @@ export default function OFXImportModal({ onClose, onImported }) {
         })),
       })
       setImportedCount(data.count)
+      // detect the most frequent month among imported transactions
+      const monthCounts = {}
+      for (const t of toImport) {
+        const m = t.data.slice(0, 7)
+        monthCounts[m] = (monthCounts[m] || 0) + 1
+      }
+      const topMonth = Object.entries(monthCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || null
+      setImportedMonth(topMonth)
       setStep('done')
     } catch (err) {
       setError(err.response?.data?.error || 'Erro ao importar transações.')
@@ -164,9 +175,23 @@ export default function OFXImportModal({ onClose, onImported }) {
           <div className="ofx-done">
             <div className="ofx-done-icon">✅</div>
             <p className="ofx-done-title">{importedCount} transação(ões) importada(s) com sucesso!</p>
-            <div className="modal-footer" style={{ justifyContent: 'center' }}>
-              <button className="btn btn-primary" onClick={() => { onImported(); onClose() }}>
-                Ver transações
+            {importedMonth && (
+              <p className="ofx-done-sub">
+                As transações são do período <strong>{importedMonth.split('-').reverse().join('/')}</strong>
+              </p>
+            )}
+            <div className="modal-footer" style={{ justifyContent: 'center', gap: 12 }}>
+              <button className="btn btn-outline" onClick={() => { onImported(); onClose() }}>
+                Ver no Dashboard
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={() => {
+                  onClose()
+                  navigate(`/reports${importedMonth ? `?month=${importedMonth}` : ''}`)
+                }}
+              >
+                Ver em Relatórios
               </button>
             </div>
           </div>
