@@ -149,6 +149,7 @@ moneytrack/
 
 - [Node.js](https://nodejs.org/) versão 18 ou superior
 - Git instalado
+- Um banco PostgreSQL acessível (local via Docker/instalação nativa, ou uma instância gratuita na nuvem — Neon, Supabase, Render)
 
 ### Passo 1 — Clonar o repositório
 
@@ -174,16 +175,17 @@ cd backend
 cp .env.example .env
 ```
 
-> Edite o `.env` gerado e defina pelo menos um `JWT_SECRET` próprio (qualquer string longa e aleatória serve para desenvolvimento local). `DATABASE_URL` já vem preenchido para uso local.
+> Edite o `.env` gerado: defina um `JWT_SECRET` próprio (qualquer string longa e aleatória serve para desenvolvimento local) e aponte `DATABASE_URL` para o seu Postgres (local ou na nuvem — veja o pré-requisito acima).
 
 ### Passo 4 — Criar o banco de dados
 
 ```bash
 # ainda dentro de backend/
-npx prisma migrate dev --name init
+npx prisma migrate deploy
+npx prisma generate
 ```
 
-> Só precisa rodar na primeira vez. Cria o arquivo `backend/prisma/dev.db`.
+> Só precisa rodar na primeira vez (ou após novas migrações). Aplica as migrações existentes no Postgres configurado em `DATABASE_URL`.
 
 ### Passo 5 — Rodar como aplicação web
 
@@ -282,7 +284,7 @@ Base URL: `http://localhost:3001/api`
 
 ## 🗄️ Banco de dados
 
-O banco é um arquivo SQLite criado automaticamente em `backend/prisma/dev.db`.
+O banco é **PostgreSQL**, acessado via Prisma ORM a partir da string de conexão em `DATABASE_URL`.
 
 **Tabela: Usuario**
 
@@ -292,6 +294,9 @@ O banco é um arquivo SQLite criado automaticamente em `backend/prisma/dev.db`.
 | nome | String | Nome do usuário |
 | email | String (único) | E-mail de login |
 | senha | String | Senha criptografada (bcrypt) |
+| foto | String? | Foto de perfil (base64), opcional |
+| resetToken | String? (único) | Token de redefinição de senha, opcional |
+| resetTokenExpiresAt | DateTime? | Expiração do token de redefinição |
 | createdAt | DateTime | Data de cadastro |
 
 **Tabela: Transacao**
@@ -324,22 +329,37 @@ O banco é um arquivo SQLite criado automaticamente em `backend/prisma/dev.db`.
 
 ## 🚢 Deploy
 
-### Backend (web)
+O banco de dados é **PostgreSQL** (não SQLite) — a API e o frontend rodam como dois serviços separados no [Render](https://render.com), descritos em [`render.yaml`](render.yaml).
 
-1. Defina as variáveis de ambiente em produção (nunca reaproveite os valores do `.env.example`):
-   - `JWT_SECRET` — obrigatório, segredo forte e único. O servidor não inicia sem essa variável.
-   - `DATABASE_URL` — caminho do SQLite. Se o host não tiver disco persistente (ex: containers efêmeros), o banco é perdido a cada deploy/restart — use um host com volume persistente ou troque para um banco gerenciado.
-   - `FRONTEND_URL` — domínio exato do frontend, usado no CORS e no link do e-mail de redefinição de senha.
-   - `SMTP_*` e `EMAIL_FROM` — credenciais reais de um provedor de e-mail.
-   - `NODE_ENV=production`
-2. Rode as migrações antes de subir: `npx prisma migrate deploy` (dentro de `backend/`).
-3. Inicie com `node server.js` (ou um process manager como PM2).
+> ⚠️ O Postgres free do Render expira 90 dias após a criação (precisa recriar ou fazer upgrade de plano depois disso). Os web services free "dormem" após 15 min de inatividade — a primeira requisição depois disso demora alguns segundos para acordar.
 
-### Frontend (web)
+### Opção A — Blueprint (recomendado)
 
-1. Gere o build com `npm run build` (a partir de `frontend/`) — usa `base: '/'` por padrão, correto para deploy web.
-2. Se o backend estiver em outro domínio, defina `VITE_API_URL` antes do build (veja `frontend/.env.example`).
-3. Sirva `frontend/dist` com fallback de SPA (todas as rotas não encontradas devem servir `index.html`), já que a navegação usa `BrowserRouter`.
+1. No dashboard do Render: **New +** → **Blueprint** → selecione este repositório. O Render lê o `render.yaml` e propõe criar de uma vez:
+   - `moneytrack-db` (PostgreSQL, plano free)
+   - `moneytrack-backend` (Web Service Node, `rootDir: backend`)
+   - `moneytrack-frontend` (Static Site, `rootDir: frontend`)
+2. `JWT_SECRET` e `DATABASE_URL` já são gerados/conectados automaticamente pelo Blueprint. Antes de confirmar o deploy, preencha manualmente (campos marcados `sync: false`):
+   - Em `moneytrack-backend`: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM`
+   - `FRONTEND_URL` (em `moneytrack-backend`) e `VITE_API_URL` (em `moneytrack-frontend`) só dá pra saber depois que os dois serviços existirem e tiverem URL — pode deixar em branco no primeiro deploy e completar no passo 3.
+3. Depois do primeiro deploy, pegue as URLs geradas (ex: `https://moneytrack-backend.onrender.com`, `https://moneytrack-frontend.onrender.com`) e preencha:
+   - `moneytrack-backend` → `FRONTEND_URL=https://moneytrack-frontend.onrender.com`
+   - `moneytrack-frontend` → `VITE_API_URL=https://moneytrack-backend.onrender.com/api`
+   - Salvar cada uma dispara um novo deploy automaticamente do serviço alterado.
+
+### Opção B — Manual (sem Blueprint)
+
+1. **Postgres**: New + → PostgreSQL (plano free). Copie a "Internal Database URL".
+2. **Backend**: New + → Web Service → `rootDir: backend` → Build Command `npm install && npx prisma generate && npx prisma migrate deploy` → Start Command `npm start`. Env vars: `DATABASE_URL` (a do passo 1), `JWT_SECRET` (gere um valor forte), `FRONTEND_URL`, `SMTP_*`, `EMAIL_FROM`.
+3. **Frontend**: New + → Static Site → `rootDir: frontend` → Build Command `npm install && npm run build` → Publish Directory `dist`. Adicione uma regra de rewrite `/*` → `/index.html` (necessário para o `BrowserRouter`). Env var: `VITE_API_URL` apontando para a URL do backend + `/api`.
+
+### Desenvolvimento local com Postgres
+
+Como o schema agora usa `provider = "postgresql"`, rodar localmente também exige uma conexão Postgres real (não dá mais para usar só um arquivo `dev.db`). Opções mais simples:
+- Um Postgres local (nativo ou via Docker: `docker run -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres`)
+- Uma instância gratuita na nuvem (Neon, Supabase, ou a própria "External Database URL" do Postgres criado no Render)
+
+Configure `DATABASE_URL` no `backend/.env` apontando para essa conexão (veja `backend/.env.example`).
 
 ### Desktop (Electron)
 
