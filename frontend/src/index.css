@@ -122,7 +122,11 @@ input[type="month"]::-webkit-calendar-picker-indicator { filter: invert(0.8); }
   justify-content: space-between;
   padding: 20px 48px;
   border-bottom: 1px solid var(--border);
+  background: rgba(15, 17, 23, 0.72);
   backdrop-filter: blur(10px);
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 .logo { font-size: 20px; font-weight: 700; }
 .nav-links { display: flex; align-items: center; gap: 20px; }
