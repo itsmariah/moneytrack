@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 export default function Login() {
@@ -8,6 +8,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const { login, user } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
 
   useEffect(() => {
     if (user) navigate('/dashboard')
@@ -29,10 +30,14 @@ export default function Login() {
 
   return (
     <div className="auth-page">
+      <Link to="/" className="back-link">← Voltar para o início</Link>
       <div className="auth-card">
         <h1>💰 MoneyTrack</h1>
         <h2>Entrar na sua conta</h2>
 
+        {location.state?.resetSuccess && (
+          <div className="alert alert-success">Senha redefinida com sucesso. Faça login com a nova senha.</div>
+        )}
         {error && <div className="alert alert-error">{error}</div>}
 
         <form onSubmit={handleSubmit}>
@@ -55,6 +60,7 @@ export default function Login() {
               placeholder="••••••••"
               required
             />
+            <Link to="/esqueci-senha" className="forgot-link">Esqueceu a senha?</Link>
           </div>
           <button type="submit" className="btn btn-primary btn-full" disabled={loading}>
             {loading ? 'Entrando...' : 'Entrar'}

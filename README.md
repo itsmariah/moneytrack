@@ -15,7 +15,7 @@
 | Nome | GitHub |
 |------|--------|
 | Mariah | [@itsmariah](https://github.com/itsmariah) |
-| Jefferson | — |
+| Jefferson | [@FIDEL7Z](https://github.com/FIDEL7Z) |
 | Diogo | — |
 | Weslley | — |
 
@@ -32,6 +32,7 @@ O **MoneyTrack** é uma aplicação de gestão financeira pessoal que permite ao
 ## ✨ Funcionalidades
 
 - Cadastro e login de usuários (senha criptografada)
+- Recuperação de senha por e-mail ("Esqueceu a senha?")
 - Adicionar, editar e excluir transações
 - Saldo calculado automaticamente
 - Filtros por tipo, categoria e período de data
@@ -41,7 +42,7 @@ O **MoneyTrack** é uma aplicação de gestão financeira pessoal que permite ao
 - Gráfico de **fontes de renda** por categoria (rosca)
 - Relatório mensal com filtros de tipo e categoria
 - Gráfico de evolução mensal (últimos 6 meses)
-- Edição de perfil (nome, e-mail, senha)
+- Edição de perfil (nome, e-mail, senha, foto de perfil)
 - Interface responsiva (funciona no celular)
 - **Aplicação desktop** empacotável via Electron
 
@@ -94,11 +95,14 @@ moneytrack/
 │   ├── middleware/
 │   │   └── auth.js                     ← Verificação do token JWT
 │   ├── routes/
-│   │   ├── auth.js                     ← Cadastro, login, editar perfil
+│   │   ├── auth.js                     ← Cadastro, login, recuperação de senha, editar perfil
 │   │   ├── transactions.js             ← CRUD de transações + importação bulk
 │   │   └── reports.js                  ← Saldo, relatórios, gráficos
+│   ├── utils/
+│   │   └── mailer.js                   ← Envio de e-mail (redefinição de senha) via nodemailer
 │   ├── server.js                       ← Ponto de entrada da API
 │   ├── .env                            ← Variáveis de ambiente (não vai pro git)
+│   ├── .env.example                    ← Modelo de variáveis de ambiente (inclui SMTP)
 │   └── package.json
 │
 └── frontend/                           ← Interface React
@@ -107,6 +111,8 @@ moneytrack/
     │   │   ├── Landing.jsx             ← Página inicial
     │   │   ├── Login.jsx               ← Tela de login
     │   │   ├── Register.jsx            ← Tela de cadastro
+    │   │   ├── ForgotPassword.jsx      ← Solicitar redefinição de senha
+    │   │   ├── ResetPassword.jsx       ← Criar nova senha a partir do link recebido
     │   │   ├── Dashboard.jsx           ← Painel principal
     │   │   └── Reports.jsx             ← Relatórios mensais com filtros
     │   ├── components/
@@ -125,7 +131,8 @@ moneytrack/
     │   │   └── api.js                  ← Configuração do Axios (suporta file://)
     │   ├── utils/
     │   │   ├── categories.js           ← Categorias por tipo (fonte única)
-    │   │   └── ofxParser.js            ← Parser de arquivos OFX (SGML e XML)
+    │   │   ├── ofxParser.js            ← Parser de arquivos OFX (SGML e XML)
+    │   │   └── resizeImage.js          ← Redimensiona a foto de perfil no navegador antes do upload
     │   ├── App.jsx                     ← Rotas da aplicação
     │   ├── main.jsx                    ← Ponto de entrada React
     │   └── index.css                   ← Estilos globais (tema escuro)
@@ -160,16 +167,25 @@ npm run install:all
 npm install
 ```
 
-### Passo 3 — Criar o banco de dados
+### Passo 3 — Configurar variáveis de ambiente
 
 ```bash
 cd backend
+cp .env.example .env
+```
+
+> Edite o `.env` gerado e defina pelo menos um `JWT_SECRET` próprio (qualquer string longa e aleatória serve para desenvolvimento local). `DATABASE_URL` já vem preenchido para uso local.
+
+### Passo 4 — Criar o banco de dados
+
+```bash
+# ainda dentro de backend/
 npx prisma migrate dev --name init
 ```
 
 > Só precisa rodar na primeira vez. Cria o arquivo `backend/prisma/dev.db`.
 
-### Passo 4 — Rodar como aplicação web
+### Passo 5 — Rodar como aplicação web
 
 Abra dois terminais:
 
@@ -183,7 +199,7 @@ cd frontend && npm run dev
 
 Acesse: **http://localhost:5173**
 
-### Passo 4 (alternativo) — Rodar como app desktop (Electron)
+### Passo 5 (alternativo) — Rodar como app desktop (Electron)
 
 ```bash
 # Da pasta raiz, inicia backend + frontend + Electron ao mesmo tempo
@@ -209,6 +225,8 @@ Base URL: `http://localhost:3001/api`
 |--------|------|-----------|------|
 | POST | `/auth/register` | Cadastrar usuário | Não |
 | POST | `/auth/login` | Fazer login | Não |
+| POST | `/auth/forgot-password` | Solicitar link de redefinição de senha por e-mail | Não |
+| POST | `/auth/reset-password` | Redefinir senha usando o token recebido por e-mail | Não |
 | GET | `/auth/me` | Dados do usuário logado | Sim |
 | PUT | `/auth/profile` | Editar perfil | Sim |
 
@@ -296,9 +314,50 @@ O banco é um arquivo SQLite criado automaticamente em `backend/prisma/dev.db`.
 ## 🔐 Segurança
 
 - Senhas armazenadas com hash **bcrypt** (fator 10) — nunca em texto puro
-- Autenticação via **JWT** com expiração de 7 dias
+- Autenticação via **JWT** com expiração de 7 dias, segredo obrigatório via `JWT_SECRET` (o servidor recusa iniciar sem essa variável)
+- Rate limiting em `/auth/login`, `/auth/register`, `/auth/forgot-password` e `/auth/reset-password`
+- Cabeçalhos de segurança via `helmet`
 - Todas as rotas de transações e relatórios exigem token válido
 - Cada usuário só acessa suas próprias transações
+
+---
+
+## 🚢 Deploy
+
+### Backend (web)
+
+1. Defina as variáveis de ambiente em produção (nunca reaproveite os valores do `.env.example`):
+   - `JWT_SECRET` — obrigatório, segredo forte e único. O servidor não inicia sem essa variável.
+   - `DATABASE_URL` — caminho do SQLite. Se o host não tiver disco persistente (ex: containers efêmeros), o banco é perdido a cada deploy/restart — use um host com volume persistente ou troque para um banco gerenciado.
+   - `FRONTEND_URL` — domínio exato do frontend, usado no CORS e no link do e-mail de redefinição de senha.
+   - `SMTP_*` e `EMAIL_FROM` — credenciais reais de um provedor de e-mail.
+   - `NODE_ENV=production`
+2. Rode as migrações antes de subir: `npx prisma migrate deploy` (dentro de `backend/`).
+3. Inicie com `node server.js` (ou um process manager como PM2).
+
+### Frontend (web)
+
+1. Gere o build com `npm run build` (a partir de `frontend/`) — usa `base: '/'` por padrão, correto para deploy web.
+2. Se o backend estiver em outro domínio, defina `VITE_API_URL` antes do build (veja `frontend/.env.example`).
+3. Sirva `frontend/dist` com fallback de SPA (todas as rotas não encontradas devem servir `index.html`), já que a navegação usa `BrowserRouter`.
+
+### Desktop (Electron)
+
+- Sempre gere o instalador com `npm run electron:build` (ou `electron:pack`) **a partir da raiz do repositório** — esses scripts setam `ELECTRON_BUILD=true`, que faz o Vite usar `base: './'` (necessário para o `file://`). Rodar `cd frontend && npm run build` manualmente gera um build incompatível com o Electron.
+- Confira que não existe `backend/.env` nem `backend/prisma/dev.db` com dados reais no momento do build — eles são excluídos do pacote pelo filtro do `electron-builder`, mas vale checar antes de distribuir.
+
+#### Publicando uma release (Windows/macOS/Linux) automaticamente
+
+O workflow [`.github/workflows/release.yml`](.github/workflows/release.yml) builda o instalador para as três plataformas e publica direto em **GitHub Releases** sempre que uma tag `vX.Y.Z` é enviada:
+
+```bash
+# 1. Atualize a versão em package.json (raiz) para bater com a tag
+# 2. Crie e envie a tag
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+Isso dispara o workflow, que builda em paralelo no Windows, macOS e Linux e anexa `.exe`/`.dmg`/`.AppImage` na release correspondente à tag — sem precisar gerar e subir o instalador manualmente. O botão "Baixar para desktop" da landing page aponta para `https://github.com/itsmariah/moneytrack/releases`, então ele passa a funcionar assim que a primeira tag for publicada.
 
 ---
 
@@ -354,11 +413,14 @@ Relatórios (/relatorios)
 | RF15 | Filtros na página de relatórios | ✅ |
 | RF16 | Gráfico de fontes de renda | ✅ |
 | RF17 | Versão desktop (Electron) | ✅ |
+| RF18 | Recuperação de senha por e-mail | ✅ |
 
 ---
 
 ## ⚠️ Observações importantes
 
-- O arquivo `.env` **não vai para o Git** (está no `.gitignore`). Cada desenvolvedor cria o seu.
+- O arquivo `.env` **não vai para o Git** (está no `.gitignore`). Cada desenvolvedor cria o seu a partir de `backend/.env.example`.
+- `JWT_SECRET` é **obrigatório** — o servidor (`node server.js`) encerra imediatamente se essa variável não estiver definida.
+- Para a recuperação de senha funcionar, configure as variáveis `SMTP_*` no `.env` do backend com credenciais de um provedor de e-mail (ex: Gmail App Password). Sem isso, o envio do e-mail falha.
 - O banco `dev.db` também **não vai para o Git**. É criado localmente com `prisma migrate dev`.
 - Os dois servidores precisam estar rodando ao mesmo tempo para o sistema funcionar (exceto no modo Electron, que gerencia isso automaticamente).

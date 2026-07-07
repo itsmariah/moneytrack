@@ -1,12 +1,42 @@
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { resizeImage } from '../utils/resizeImage'
 
 export default function ProfileModal({ onClose }) {
   const { user, updateProfile } = useAuth()
   const [form, setForm] = useState({ nome: user?.nome || '', email: user?.email || '', senha: '', confirmar: '' })
+  const [foto, setFoto] = useState(user?.foto ?? null)
+  const [fotoChanged, setFotoChanged] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
+
+  const handleFotoChange = async (e) => {
+    const file = e.target.files[0]
+    e.target.value = ''
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      return setError('Selecione um arquivo de imagem')
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      return setError('Imagem muito grande (máximo 8MB)')
+    }
+
+    try {
+      setError('')
+      const resized = await resizeImage(file)
+      setFoto(resized)
+      setFotoChanged(true)
+    } catch {
+      setError('Não foi possível processar a imagem')
+    }
+  }
+
+  const handleRemoveFoto = () => {
+    setFoto(null)
+    setFotoChanged(true)
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -21,6 +51,7 @@ export default function ProfileModal({ onClose }) {
     if (form.nome !== user.nome) payload.nome = form.nome
     if (form.email !== user.email) payload.email = form.email
     if (form.senha) payload.senha = form.senha
+    if (fotoChanged) payload.foto = foto
 
     if (Object.keys(payload).length === 0) {
       return setSuccess('Nenhuma alteração detectada.')
@@ -31,6 +62,7 @@ export default function ProfileModal({ onClose }) {
       await updateProfile(payload)
       setSuccess('Perfil atualizado com sucesso!')
       setForm(f => ({ ...f, senha: '', confirmar: '' }))
+      setFotoChanged(false)
     } catch (err) {
       setError(err.response?.data?.error || 'Erro ao atualizar perfil')
     } finally {
@@ -50,6 +82,26 @@ export default function ProfileModal({ onClose }) {
         {success && <div className="alert alert-success">{success}</div>}
 
         <form onSubmit={handleSubmit}>
+          <div className="profile-photo-field">
+            {foto ? (
+              <img src={foto} alt="Foto de perfil" className="profile-photo-preview" />
+            ) : (
+              <div className="profile-photo-preview profile-photo-placeholder">
+                {user?.nome?.[0]?.toUpperCase()}
+              </div>
+            )}
+            <div className="profile-photo-actions">
+              <label className="btn btn-outline btn-sm">
+                Escolher foto
+                <input type="file" accept="image/*" onChange={handleFotoChange} hidden />
+              </label>
+              {foto && (
+                <button type="button" className="btn btn-outline btn-sm" onClick={handleRemoveFoto}>
+                  Remover
+                </button>
+              )}
+            </div>
+          </div>
           <div className="form-group">
             <label>Nome</label>
             <input

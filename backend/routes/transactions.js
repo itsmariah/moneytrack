@@ -106,6 +106,12 @@ router.put('/:id', async (req, res) => {
     if (!tipo || !valor || !categoria || !data) {
       return res.status(400).json({ error: 'Campos obrigatórios: tipo, valor, categoria, data' });
     }
+    if (!['receita', 'despesa'].includes(tipo)) {
+      return res.status(400).json({ error: 'Tipo deve ser receita ou despesa' });
+    }
+    if (Number(valor) <= 0) {
+      return res.status(400).json({ error: 'Valor deve ser maior que zero' });
+    }
 
     const updated = await prisma.transacao.update({
       where: { id },

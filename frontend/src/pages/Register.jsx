@@ -32,6 +32,7 @@ export default function Register() {
 
   return (
     <div className="auth-page">
+      <Link to="/" className="back-link">← Voltar para o início</Link>
       <div className="auth-card">
         <h1>💰 MoneyTrack</h1>
         <h2>Criar conta grátis</h2>

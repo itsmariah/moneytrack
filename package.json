@@ -2,14 +2,18 @@
   "name": "moneytrack",
   "version": "1.0.0",
   "main": "electron/main.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/itsmariah/moneytrack.git"
+  },
   "scripts": {
     "backend": "cd backend && npm run dev",
     "frontend": "cd frontend && npm run dev",
     "install:all": "cd backend && npm install && cd ../frontend && npm install",
     "electron:start": "wait-on http://localhost:5173 && cross-env NODE_ENV=development electron .",
     "electron:dev": "concurrently -k -n backend,frontend,electron -c blue,green,yellow \"npm run backend\" \"npm run frontend\" \"npm run electron:start\"",
-    "electron:build": "cd frontend && npm run build && cd .. && electron-builder",
-    "electron:pack": "cd frontend && npm run build && cd .. && electron-builder --dir"
+    "electron:build": "cd frontend && cross-env ELECTRON_BUILD=true npm run build && cd .. && electron-builder",
+    "electron:pack": "cd frontend && cross-env ELECTRON_BUILD=true npm run build && cd .. && electron-builder --dir"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
@@ -34,7 +38,11 @@
         "to": "backend",
         "filter": [
           "**/*",
-          "!node_modules/.cache"
+          "!node_modules/.cache",
+          "!.env",
+          "!.env.*",
+          "!prisma/dev.db",
+          "!prisma/dev.db-journal"
         ]
       }
     ],
@@ -46,6 +54,11 @@
     },
     "linux": {
       "target": "AppImage"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "itsmariah",
+      "repo": "moneytrack"
     }
   }
 }

@@ -4,16 +4,19 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = "file:./dev.db"
+  url      = env("DATABASE_URL")
 }
 
 model Usuario {
-  id         Int         @id @default(autoincrement())
-  nome       String
-  email      String      @unique
-  senha      String
-  createdAt  DateTime    @default(now())
-  transacoes Transacao[]
+  id                  Int         @id @default(autoincrement())
+  nome                String
+  email               String      @unique
+  senha               String
+  foto                String?
+  resetToken          String?     @unique
+  resetTokenExpiresAt DateTime?
+  createdAt           DateTime    @default(now())
+  transacoes          Transacao[]
 }
 
 model Transacao {

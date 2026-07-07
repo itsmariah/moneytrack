@@ -21,7 +21,9 @@ export default function Navbar() {
 
       <div className="navbar-user">
         <button className="user-btn" onClick={() => setShowProfile(true)}>
-          <div className="avatar">{user?.nome?.[0]?.toUpperCase()}</div>
+          <div className="avatar">
+            {user?.foto ? <img src={user.foto} alt="" /> : user?.nome?.[0]?.toUpperCase()}
+          </div>
           <span>{user?.nome?.split(' ')[0]}</span>
         </button>
         <button className="btn btn-outline btn-sm" onClick={logout}>Sair</button>

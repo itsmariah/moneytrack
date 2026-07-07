@@ -1,10 +1,11 @@
 import axios from 'axios'
 
-// When loaded from file:// (Electron production), use absolute URL
+// When loaded from file:// (Electron production), use absolute URL.
+// VITE_API_URL permite apontar para um backend hospedado em domínio separado do frontend.
 const baseURL =
   window.location.protocol === 'file:'
     ? 'http://localhost:3001/api'
-    : '/api'
+    : (import.meta.env.VITE_API_URL || '/api')
 
 const api = axios.create({ baseURL })
 
