@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer
@@ -12,7 +13,8 @@ const fmt = (n) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency:
 const fmtDate = (d) => new Date(d + 'T00:00:00').toLocaleDateString('pt-BR')
 
 export default function Reports() {
-  const [month, setMonth] = useState(new Date().toISOString().slice(0, 7))
+  const [searchParams] = useSearchParams()
+  const [month, setMonth] = useState(searchParams.get('month') || new Date().toISOString().slice(0, 7))
   const [report, setReport] = useState(null)
   const [evolution, setEvolution] = useState([])
   const [loading, setLoading] = useState(true)

@@ -559,7 +559,8 @@ input[type="month"]::-webkit-calendar-picker-indicator { filter: invert(0.8); }
 
 .ofx-done { text-align: center; padding: 32px 16px; }
 .ofx-done-icon { font-size: 52px; margin-bottom: 16px; }
-.ofx-done-title { font-size: 17px; font-weight: 600; margin-bottom: 24px; }
+.ofx-done-title { font-size: 17px; font-weight: 600; margin-bottom: 8px; }
+.ofx-done-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
 
 /* ── SCROLLBAR ── */
 ::-webkit-scrollbar { width: 6px; }
