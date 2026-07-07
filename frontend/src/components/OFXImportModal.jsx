@@ -40,9 +40,13 @@ export default function OFXImportModal({ onClose, onImported }) {
     if (f) processFile(f)
   }, [])
 
-  const toggle    = (key)            => setTransactions(p => p.map(t => t._key === key ? { ...t, selected: !t.selected } : t))
-  const toggleAll = (val)            => setTransactions(p => p.map(t => ({ ...t, selected: val })))
-  const setcat    = (key, categoria) => setTransactions(p => p.map(t => t._key === key ? { ...t, categoria } : t))
+  const toggle       = (key)            => setTransactions(p => p.map(t => t._key === key ? { ...t, selected: !t.selected } : t))
+  const toggleAll    = (val)            => setTransactions(p => p.map(t => ({ ...t, selected: val })))
+  const setcat       = (key, categoria) => setTransactions(p => p.map(t => t._key === key ? { ...t, categoria } : t))
+  const setCustomCat = (key, value)     => setTransactions(p => p.map(t => t._key === key ? { ...t, customCategoria: value } : t))
+
+  const resolveCategoria = (t) =>
+    t.categoria === 'Outros' && t.customCategoria?.trim() ? t.customCategoria.trim() : t.categoria
 
   const handleImport = async () => {
     const toImport = transactions.filter(t => t.selected)
@@ -51,8 +55,8 @@ export default function OFXImportModal({ onClose, onImported }) {
     setError('')
     try {
       const { data } = await api.post('/transactions/bulk', {
-        transactions: toImport.map(({ tipo, valor, categoria, descricao, data }) => ({
-          tipo, valor, categoria, descricao, data,
+        transactions: toImport.map(t => ({
+          tipo: t.tipo, valor: t.valor, categoria: resolveCategoria(t), descricao: t.descricao, data: t.data,
         })),
       })
       setImportedCount(data.count)
@@ -145,6 +149,15 @@ export default function OFXImportModal({ onClose, onImported }) {
                         <select className="ofx-cat-select" value={t.categoria} onChange={e => setcat(t._key, e.target.value)}>
                           {TODAS_CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
+                        {t.categoria === 'Outros' && (
+                          <input
+                            type="text"
+                            className="ofx-cat-custom"
+                            value={t.customCategoria || ''}
+                            onChange={e => setCustomCat(t._key, e.target.value)}
+                            placeholder="Especifique..."
+                          />
+                        )}
                       </td>
                       <td className={`ofx-amount ofx-amount--${t.tipo}`}>
                         {t.tipo === 'receita' ? '+' : '-'}{fmt(t.valor)}

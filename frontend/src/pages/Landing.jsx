@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import screenshotDashboard from '../../assets/imagens/moneytrack_dashboard.png'
 import screenshotRelatorio from '../../assets/imagens/moneytrack_relatorio.png'
@@ -10,11 +10,12 @@ const isDesktopApp = window.location.protocol === 'file:'
 export default function Landing() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [showBackToTop, setShowBackToTop] = useState(false)
 
   useEffect(() => {
-    if (user) navigate('/dashboard')
-  }, [user, navigate])
+    if (user && !location.state?.fromApp) navigate('/dashboard')
+  }, [user, navigate, location.state])
 
   useEffect(() => {
     const onScroll = () => setShowBackToTop(window.scrollY > 500)
@@ -27,7 +28,7 @@ export default function Landing() {
   return (
     <div className="landing">
       <nav className="landing-nav">
-        <div className="logo">💰 MoneyTrack</div>
+        <div className="logo"><span className="logo-coin">💰</span> MoneyTrack</div>
         <div className="nav-links">
           <a href="#sobre" className="nav-link">Sobre</a>
           <a href="#funcionalidades" className="nav-link">Funcionalidades</a>
@@ -41,7 +42,7 @@ export default function Landing() {
         <h1>Controle suas finanças<br /><span className="gradient-text">com inteligência</span></h1>
         <p>Registre receitas e despesas, importe extratos bancários e acompanhe relatórios com gráficos para tomar decisões financeiras mais conscientes — na web ou no desktop.</p>
         <div className="hero-actions">
-          <Link to="/cadastro" className="btn btn-primary btn-lg">Começar gratuitamente</Link>
+          <Link to="/cadastro" className="btn btn-primary btn-lg">Usar a versão web</Link>
           {!isDesktopApp && <a href="#desktop" className="btn btn-outline btn-lg">⬇ Baixar para desktop</a>}
         </div>
       </section>

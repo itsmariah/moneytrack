@@ -12,7 +12,9 @@ export default function Navbar() {
 
   return (
     <header className="navbar">
-      <div className="navbar-brand">💰 MoneyTrack</div>
+      <Link to="/" state={{ fromApp: true }} className="navbar-brand">
+        <span className="logo-coin">💰</span> MoneyTrack
+      </Link>
 
       <nav className="navbar-nav">
         <Link to="/dashboard" className={isActive('/dashboard')}>Dashboard</Link>

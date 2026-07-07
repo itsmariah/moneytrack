@@ -128,7 +128,12 @@ input[type="month"]::-webkit-calendar-picker-indicator { filter: invert(0.8); }
   top: 0;
   z-index: 100;
 }
-.logo { font-size: 20px; font-weight: 700; }
+.logo { font-size: 20px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; perspective: 300px; }
+.logo-coin { display: inline-block; animation: coin-flip 2.5s linear infinite; }
+@keyframes coin-flip {
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(360deg); }
+}
 .nav-links { display: flex; align-items: center; gap: 20px; }
 .nav-link { color: var(--text-muted); font-size: 14px; font-weight: 500; }
 .nav-link:hover { color: var(--text); }
@@ -263,7 +268,17 @@ input[type="month"]::-webkit-calendar-picker-indicator { filter: invert(0.8); }
   top: 0;
   z-index: 100;
 }
-.navbar-brand { font-size: 18px; font-weight: 700; margin-right: auto; }
+.navbar-brand {
+  font-size: 18px;
+  font-weight: 700;
+  margin-right: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+  perspective: 300px;
+}
+.navbar-brand:hover { color: var(--text); }
 .navbar-nav { display: flex; gap: 4px; }
 .navbar-nav a { padding: 6px 14px; border-radius: 8px; font-size: 14px; color: var(--text-muted); font-weight: 500; transition: all 0.2s; }
 .navbar-nav a:hover, .navbar-nav a.active { background: var(--bg3); color: var(--text); }
@@ -548,6 +563,17 @@ input[type="month"]::-webkit-calendar-picker-indicator { filter: invert(0.8); }
 }
 .ofx-cat-select:focus { outline: none; border-color: var(--primary); }
 .ofx-cat-select option { background: var(--bg2); }
+.ofx-cat-custom {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 4px 8px;
+  font-size: 12px;
+  width: 100%;
+  margin-top: 4px;
+}
+.ofx-cat-custom:focus { outline: none; border-color: var(--primary); }
 
 .ofx-summary {
   display: flex;

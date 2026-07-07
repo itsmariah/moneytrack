@@ -10,18 +10,22 @@ export default function TransactionModal({ transaction, onClose, onSaved }) {
     descricao: '',
     data: new Date().toISOString().split('T')[0],
   })
+  const [customCategoria, setCustomCategoria] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (transaction) {
+      const cats = categoriasPorTipo(transaction.tipo)
+      const isCustom = !cats.includes(transaction.categoria)
       setForm({
         tipo: transaction.tipo,
         valor: transaction.valor,
-        categoria: transaction.categoria,
+        categoria: isCustom ? 'Outros' : transaction.categoria,
         descricao: transaction.descricao || '',
         data: transaction.data,
       })
+      setCustomCategoria(isCustom ? transaction.categoria : '')
     }
   }, [transaction])
 
@@ -30,18 +34,25 @@ export default function TransactionModal({ transaction, onClose, onSaved }) {
     const cats = categoriasPorTipo(form.tipo)
     if (!cats.includes(form.categoria)) {
       setForm(f => ({ ...f, categoria: cats[0] }))
+      setCustomCategoria('')
     }
   }, [form.tipo])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+
+    const categoria = form.categoria === 'Outros' && customCategoria.trim()
+      ? customCategoria.trim()
+      : form.categoria
+
     setLoading(true)
     try {
+      const payload = { ...form, categoria }
       if (transaction) {
-        await api.put(`/transactions/${transaction.id}`, form)
+        await api.put(`/transactions/${transaction.id}`, payload)
       } else {
-        await api.post('/transactions', form)
+        await api.post('/transactions', payload)
       }
       onSaved()
     } catch (err) {
@@ -105,6 +116,18 @@ export default function TransactionModal({ transaction, onClose, onSaved }) {
               {categoriasPorTipo(form.tipo).map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
+
+          {form.categoria === 'Outros' && (
+            <div className="form-group">
+              <label>Especifique a categoria</label>
+              <input
+                type="text"
+                value={customCategoria}
+                onChange={e => setCustomCategoria(e.target.value)}
+                placeholder="Ex: Presente, Doação..."
+              />
+            </div>
+          )}
 
           <div className="form-group">
             <label>Descrição (opcional)</label>
