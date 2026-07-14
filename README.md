@@ -8,6 +8,8 @@
 ![Database](https://img.shields.io/badge/banco-PostgreSQL%20%7C%20Prisma-blue)
 ![Desktop](https://img.shields.io/badge/desktop-Electron-47848f)
 
+**🔗 Acesse online:** [moneytrack-m4dd.vercel.app](https://moneytrack-m4dd.vercel.app)
+
 ---
 
 ## 👥 Equipe
@@ -335,6 +337,14 @@ O banco é **PostgreSQL**, acessado via Prisma ORM a partir da string de conexã
 O banco de dados é **PostgreSQL** (não SQLite), hospedado gratuitamente no **[Neon](https://neon.com)**. O backend roda no **[Render](https://render.com)** (via [`render.yaml`](render.yaml)), e o frontend é publicado como site estático na **[Vercel](https://vercel.com)** (via [`frontend/vercel.json`](frontend/vercel.json)). Essa combinação não exige cartão de crédito em nenhuma das três plataformas.
 
 > ⚠️ Confira as condições atuais de cada plataforma (limites de uso, cartão de crédito) antes de criar as contas — políticas de free tier mudam com frequência. Duas limitações do plano free a ter em mente: o backend no Render "dorme" após 15 min sem tráfego (primeiro acesso subsequente leva ~1 min pra acordar), e o Postgres do Neon suspende o compute após períodos ociosos (também com cold start rápido, mas sem expirar ou apagar dados — diferente do free tier do próprio Render, que apaga o banco após 30 dias).
+
+### Ambiente em produção
+
+| Camada | URL |
+|--------|-----|
+| Frontend (Vercel) | https://moneytrack-m4dd.vercel.app |
+| Backend (Render) | https://moneytrack-backend-glsk.onrender.com/api |
+| Banco de dados | Neon, projeto `moneytrack`, região `aws-sa-east-1` (São Paulo) |
 
 ### Banco de dados (Neon)
 
