@@ -1,0 +1,16 @@
+# app = "moneytrack-backend"  # descomente e ajuste após `fly launch` (o nome precisa ser único globalmente)
+primary_region = "gru"
+
+[build]
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1

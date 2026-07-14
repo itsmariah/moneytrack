@@ -49,6 +49,7 @@ function createWindow() {
     minWidth: 900,
     minHeight: 600,
     title: 'MoneyTrack',
+    icon: path.join(__dirname, 'icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
