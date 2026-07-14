@@ -5,7 +5,7 @@
 ![Status](https://img.shields.io/badge/status-em%20desenvolvimento-yellow)
 ![Frontend](https://img.shields.io/badge/frontend-React%20%7C%20Vite-61dafb)
 ![Backend](https://img.shields.io/badge/backend-Node.js%20%7C%20Express-green)
-![Database](https://img.shields.io/badge/banco-SQLite%20%7C%20Prisma-blue)
+![Database](https://img.shields.io/badge/banco-PostgreSQL%20%7C%20Prisma-blue)
 ![Desktop](https://img.shields.io/badge/desktop-Electron-47848f)
 
 ---
@@ -70,7 +70,7 @@ O **MoneyTrack** é uma aplicação de gestão financeira pessoal que permite ao
 | Gráficos | Recharts |
 | HTTP | Axios |
 | Backend | Node.js + Express |
-| Banco de dados | SQLite (via Prisma ORM) |
+| Banco de dados | PostgreSQL (via Prisma ORM) |
 | Autenticação | JWT (JSON Web Token) |
 | Criptografia | bcryptjs |
 | Desktop | Electron 31 + electron-builder |
@@ -101,11 +101,11 @@ moneytrack/
 │   ├── utils/
 │   │   └── mailer.js                   ← Envio de e-mail (redefinição de senha) via nodemailer
 │   ├── server.js                       ← Ponto de entrada da API
-│   ├── Dockerfile                      ← Imagem para deploy no Fly.io
-│   ├── fly.toml                        ← Configuração do app no Fly.io
 │   ├── .env                            ← Variáveis de ambiente (não vai pro git)
 │   ├── .env.example                    ← Modelo de variáveis de ambiente (inclui SMTP)
 │   └── package.json
+│
+├── render.yaml                          ← Blueprint de deploy do backend no Render
 │
 └── frontend/                           ← Interface React
     ├── src/
@@ -332,42 +332,36 @@ O banco é **PostgreSQL**, acessado via Prisma ORM a partir da string de conexã
 
 ## 🚢 Deploy
 
-O banco de dados é **PostgreSQL** (não SQLite). O backend + Postgres rodam no **[Fly.io](https://fly.io)** (via [`backend/Dockerfile`](backend/Dockerfile) e [`backend/fly.toml`](backend/fly.toml)), e o frontend é publicado como site estático na **[Vercel](https://vercel.com)** (via [`frontend/vercel.json`](frontend/vercel.json)).
+O banco de dados é **PostgreSQL** (não SQLite), hospedado gratuitamente no **[Neon](https://neon.com)**. O backend roda no **[Render](https://render.com)** (via [`render.yaml`](render.yaml)), e o frontend é publicado como site estático na **[Vercel](https://vercel.com)** (via [`frontend/vercel.json`](frontend/vercel.json)). Essa combinação não exige cartão de crédito em nenhuma das três plataformas.
 
-> ⚠️ Confira as condições atuais de cada plataforma (cartão de crédito cadastrado, limites de uso) antes de criar as contas — políticas de free tier mudam com frequência.
+> ⚠️ Confira as condições atuais de cada plataforma (limites de uso, cartão de crédito) antes de criar as contas — políticas de free tier mudam com frequência. Duas limitações do plano free a ter em mente: o backend no Render "dorme" após 15 min sem tráfego (primeiro acesso subsequente leva ~1 min pra acordar), e o Postgres do Neon suspende o compute após períodos ociosos (também com cold start rápido, mas sem expirar ou apagar dados — diferente do free tier do próprio Render, que apaga o banco após 30 dias).
 
-### Backend + Postgres (Fly.io)
+### Banco de dados (Neon)
 
-Pré-requisito: [flyctl](https://fly.io/docs/flyctl/install/) instalado e autenticado (`fly auth login`).
+1. [neon.com](https://neon.com) → crie um projeto Postgres (pode usar a região São Paulo — `aws-sa-east-1`).
+2. Copie a **connection string** (formato `postgresql://usuario:senha@host/neondb?sslmode=require`).
+3. Rode as migrations apontando pra ela (uma vez, a partir de `backend/`):
+   ```bash
+   DATABASE_URL="sua-connection-string" npx prisma migrate deploy
+   ```
 
-```bash
-cd backend
+### Backend (Render)
 
-# Cria o app (escolha um nome único globalmente quando perguntado, ex: moneytrack-backend-seunome)
-fly launch --no-deploy
-
-# Cria um Postgres gerenciado e conecta ao app (isso já define DATABASE_URL automaticamente como secret)
-fly postgres create
-fly postgres attach <nome-do-postgres-criado>
-
-# Define os demais secrets
-fly secrets set JWT_SECRET="$(openssl rand -hex 32)"
-fly secrets set FRONTEND_URL="https://SEU-PROJETO.vercel.app"
-fly secrets set SMTP_HOST="smtp.gmail.com" SMTP_PORT="587" SMTP_USER="seu@email.com" SMTP_PASS="sua-senha-de-app" EMAIL_FROM="MoneyTrack <seu@email.com>"
-
-# Deploy
-fly deploy
-```
-
-O `Dockerfile` já roda `prisma generate` no build e `prisma migrate deploy` antes de iniciar o servidor a cada deploy. O `fly.toml` mantém `min_machines_running = 1`, ou seja, sem "dormir" por inatividade.
+1. [render.com](https://render.com) → **New → Blueprint** → conecte o repositório do GitHub. O Render detecta o [`render.yaml`](render.yaml) na raiz automaticamente.
+2. Ao aplicar o blueprint, preencha as variáveis marcadas como `sync: false`:
+   - `DATABASE_URL`: a connection string do Neon (passo anterior)
+   - `FRONTEND_URL`: URL do projeto na Vercel (ex: `https://seu-projeto.vercel.app`)
+   - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM`: credenciais de e-mail para recuperação de senha
+   - `JWT_SECRET` é gerado automaticamente pelo Render (`generateValue: true`)
+3. Deploy. O `buildCommand` já roda `prisma generate` e `prisma migrate deploy` a cada deploy.
 
 ### Frontend (Vercel)
 
 1. [vercel.com](https://vercel.com) → **Add New → Project** → importe o repositório.
 2. **Root Directory**: `frontend`
 3. Framework preset: **Vite** (a Vercel detecta sozinha; build command `npm run build`, output `dist`)
-4. Variável de ambiente: `VITE_API_URL` = URL do app criado no Fly.io + `/api` (ex: `https://moneytrack-backend-seunome.fly.dev/api`)
-5. Deploy. Depois disso, pegue a URL gerada pela Vercel e atualize o secret `FRONTEND_URL` no Fly.io (`fly secrets set FRONTEND_URL="https://seu-projeto.vercel.app"`), se ainda não tiver usado a URL final no passo anterior.
+4. Variável de ambiente: `VITE_API_URL` = URL do app criado no Render + `/api` (ex: `https://moneytrack-backend.onrender.com/api`)
+5. Deploy. Depois disso, pegue a URL gerada pela Vercel e atualize `FRONTEND_URL` nas variáveis de ambiente do serviço no Render, se ainda não tiver usado a URL final no passo anterior.
 
 O `vercel.json` já cuida do rewrite de SPA (`BrowserRouter`), então rotas como `/dashboard` funcionam mesmo com acesso direto/F5.
 
@@ -375,7 +369,7 @@ O `vercel.json` já cuida do rewrite de SPA (`BrowserRouter`), então rotas como
 
 Como o schema usa `provider = "postgresql"`, rodar localmente também exige uma conexão Postgres real (não dá mais para usar só um arquivo `dev.db`). Opções mais simples:
 - Um Postgres local (nativo ou via Docker: `docker run -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres`)
-- Uma instância gratuita na nuvem (Neon, Supabase, ou o próprio Postgres criado no Fly.io — use `fly postgres connect` ou exponha a porta para pegar a connection string externa)
+- Uma instância gratuita na nuvem (o próprio projeto Neon criado para produção, ou outro separado para dev)
 
 Configure `DATABASE_URL` no `backend/.env` apontando para essa conexão (veja `backend/.env.example`).
 
