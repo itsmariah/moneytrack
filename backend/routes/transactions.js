@@ -5,6 +5,17 @@ const authMiddleware = require('../middleware/auth');
 const router = express.Router();
 router.use(authMiddleware);
 
+const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+
+// Confere que a string não só bate com o formato YYYY-MM-DD, mas representa uma data real
+// (ex: rejeita "2026-02-30"). Ordenação e filtros por período dependem disso.
+function isValidDate(str) {
+  if (typeof str !== 'string' || !DATE_REGEX.test(str)) return false;
+  const [year, month, day] = str.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+}
+
 // RF08 - Listar transações (com filtros RF10 e RF11)
 router.get('/', async (req, res) => {
   try {
@@ -46,6 +57,9 @@ router.post('/bulk', async (req, res) => {
       if (Number(t.valor) <= 0) {
         return res.status(400).json({ error: 'Valor deve ser maior que zero' });
       }
+      if (!isValidDate(t.data)) {
+        return res.status(400).json({ error: 'Data deve estar no formato YYYY-MM-DD' });
+      }
     }
     const created = await prisma.transacao.createMany({
       data: transactions.map(t => ({
@@ -76,6 +90,9 @@ router.post('/', async (req, res) => {
     }
     if (Number(valor) <= 0) {
       return res.status(400).json({ error: 'Valor deve ser maior que zero' });
+    }
+    if (!isValidDate(data)) {
+      return res.status(400).json({ error: 'Data deve estar no formato YYYY-MM-DD' });
     }
 
     const created = await prisma.transacao.create({
@@ -111,6 +128,9 @@ router.put('/:id', async (req, res) => {
     }
     if (Number(valor) <= 0) {
       return res.status(400).json({ error: 'Valor deve ser maior que zero' });
+    }
+    if (!isValidDate(data)) {
+      return res.status(400).json({ error: 'Data deve estar no formato YYYY-MM-DD' });
     }
 
     const updated = await prisma.transacao.update({

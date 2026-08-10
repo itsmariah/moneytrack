@@ -34,12 +34,18 @@ router.get('/balance', async (req, res) => {
 router.get('/monthly', async (req, res) => {
   try {
     const { month } = req.query;
-    if (!month) return res.status(400).json({ error: 'Parâmetro month obrigatório (YYYY-MM)' });
+    if (!month || !/^\d{4}-\d{2}$/.test(month)) {
+      return res.status(400).json({ error: 'Parâmetro month obrigatório no formato YYYY-MM' });
+    }
+
+    const [year, monthNum] = month.split('-').map(Number);
+    const lastDay = new Date(year, monthNum, 0).getDate();
+    const endDate = `${month}-${String(lastDay).padStart(2, '0')}`;
 
     const transactions = await prisma.transacao.findMany({
       where: {
         usuarioId: req.userId,
-        data: { gte: `${month}-01`, lte: `${month}-31` },
+        data: { gte: `${month}-01`, lte: endDate },
       },
       orderBy: { data: 'asc' },
     });
