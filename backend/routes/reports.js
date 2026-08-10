@@ -2,6 +2,12 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 const prisma = require('../database/db');
 const authMiddleware = require('../middleware/auth');
+const {
+  calculateBalance,
+  summarizeTransactions,
+  getMonthDateRange,
+  buildMonthlyEvolution,
+} = require('../utils/reportCalculations');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -34,9 +40,7 @@ router.get('/balance', async (req, res) => {
       _sum: { valor: true },
     });
 
-    const receitas = rows.find(r => r.tipo === 'receita')?._sum.valor || 0;
-    const despesas = rows.find(r => r.tipo === 'despesa')?._sum.valor || 0;
-    res.json({ receitas, despesas, saldo: receitas - despesas });
+    res.json(calculateBalance(rows));
   } catch (err) {
     res.status(500).json({ error: 'Erro ao calcular saldo' });
   }
@@ -50,22 +54,17 @@ router.get('/monthly', async (req, res) => {
       return res.status(400).json({ error: 'Parâmetro month obrigatório no formato YYYY-MM' });
     }
 
-    const [year, monthNum] = month.split('-').map(Number);
-    const lastDay = new Date(year, monthNum, 0).getDate();
-    const endDate = `${month}-${String(lastDay).padStart(2, '0')}`;
+    const { start, end } = getMonthDateRange(month);
 
     const transactions = await prisma.transacao.findMany({
       where: {
         usuarioId: req.userId,
-        data: { gte: `${month}-01`, lte: endDate },
+        data: { gte: start, lte: end },
       },
       orderBy: { data: 'asc' },
     });
 
-    const receitas = transactions.filter(t => t.tipo === 'receita').reduce((s, t) => s + t.valor, 0);
-    const despesas = transactions.filter(t => t.tipo === 'despesa').reduce((s, t) => s + t.valor, 0);
-
-    res.json({ month, transactions, resumo: { receitas, despesas, saldo: receitas - despesas } });
+    res.json({ month, transactions, resumo: summarizeTransactions(transactions) });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao gerar relatório' });
   }
@@ -108,14 +107,7 @@ router.get('/evolution', async (req, res) => {
       select: { tipo: true, valor: true, data: true },
     });
 
-    const monthMap = {};
-    for (const t of transactions) {
-      const mes = t.data.slice(0, 7);
-      if (!monthMap[mes]) monthMap[mes] = { mes, receitas: 0, despesas: 0 };
-      monthMap[mes][t.tipo === 'receita' ? 'receitas' : 'despesas'] += t.valor;
-    }
-
-    res.json(Object.values(monthMap).sort((a, b) => a.mes.localeCompare(b.mes)));
+    res.json(buildMonthlyEvolution(transactions));
   } catch (err) {
     res.status(500).json({ error: 'Erro ao buscar evolução' });
   }

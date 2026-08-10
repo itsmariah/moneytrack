@@ -11,7 +11,10 @@ function isValidDate(str) {
 
 // Retorna a mensagem de erro (string) se os dados da transação forem inválidos, ou null se ok.
 function validateTransactionInput({ tipo, valor, categoria, data }) {
-  if (!tipo || !valor || !categoria || !data) {
+  // valor === 0 não deve cair aqui como "campo faltando" — usamos !valor em tipo/categoria/data
+  // (nunca legitimamente 0/vazio), mas checamos valor separadamente para dar a mensagem certa.
+  const valorAusente = valor === undefined || valor === null || valor === '';
+  if (!tipo || valorAusente || !categoria || !data) {
     return 'Campos obrigatórios: tipo, valor, categoria, data';
   }
   if (!['receita', 'despesa'].includes(tipo)) {
