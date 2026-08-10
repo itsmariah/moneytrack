@@ -2,13 +2,22 @@ import { useState, useEffect } from 'react'
 import api from '../services/api'
 import { categoriasPorTipo } from '../utils/categories'
 
+// new Date().toISOString() é UTC — perto da meia-noite no Brasil (UTC-3) isso adianta
+// a data em um dia. Aqui montamos a data local manualmente para evitar esse desvio.
+function todayLocal() {
+  const now = new Date()
+  const mes = String(now.getMonth() + 1).padStart(2, '0')
+  const dia = String(now.getDate()).padStart(2, '0')
+  return `${now.getFullYear()}-${mes}-${dia}`
+}
+
 export default function TransactionModal({ transaction, onClose, onSaved }) {
   const [form, setForm] = useState({
     tipo: 'despesa',
     valor: '',
     categoria: 'Outros',
     descricao: '',
-    data: new Date().toISOString().split('T')[0],
+    data: todayLocal(),
   })
   const [customCategoria, setCustomCategoria] = useState('')
   const [error, setError] = useState('')
@@ -95,8 +104,9 @@ export default function TransactionModal({ transaction, onClose, onSaved }) {
           </div>
 
           <div className="form-group">
-            <label>Valor (R$)</label>
+            <label htmlFor="tx-valor">Valor (R$)</label>
             <input
+              id="tx-valor"
               type="number"
               step="0.01"
               min="0.01"
@@ -108,8 +118,9 @@ export default function TransactionModal({ transaction, onClose, onSaved }) {
           </div>
 
           <div className="form-group">
-            <label>Categoria</label>
+            <label htmlFor="tx-categoria">Categoria</label>
             <select
+              id="tx-categoria"
               value={form.categoria}
               onChange={e => setForm({ ...form, categoria: e.target.value })}
             >
@@ -119,8 +130,9 @@ export default function TransactionModal({ transaction, onClose, onSaved }) {
 
           {form.categoria === 'Outros' && (
             <div className="form-group">
-              <label>Especifique a categoria</label>
+              <label htmlFor="tx-categoria-custom">Especifique a categoria</label>
               <input
+                id="tx-categoria-custom"
                 type="text"
                 value={customCategoria}
                 onChange={e => setCustomCategoria(e.target.value)}
@@ -130,8 +142,9 @@ export default function TransactionModal({ transaction, onClose, onSaved }) {
           )}
 
           <div className="form-group">
-            <label>Descrição (opcional)</label>
+            <label htmlFor="tx-descricao">Descrição (opcional)</label>
             <input
+              id="tx-descricao"
               type="text"
               value={form.descricao}
               onChange={e => setForm({ ...form, descricao: e.target.value })}
@@ -140,8 +153,9 @@ export default function TransactionModal({ transaction, onClose, onSaved }) {
           </div>
 
           <div className="form-group">
-            <label>Data</label>
+            <label htmlFor="tx-data">Data</label>
             <input
+              id="tx-data"
               type="date"
               value={form.data}
               onChange={e => setForm({ ...form, data: e.target.value })}

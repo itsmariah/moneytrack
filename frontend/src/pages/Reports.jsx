@@ -12,12 +12,20 @@ import api from '../services/api'
 const fmt = (n) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n)
 const fmtDate = (d) => new Date(d + 'T00:00:00').toLocaleDateString('pt-BR')
 
+// new Date().toISOString() é UTC — perto da virada do mês no Brasil (UTC-3) isso pode
+// adiantar o mês padrão exibido. Aqui montamos o mês local manualmente para evitar isso.
+function currentMonthLocal() {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+}
+
 export default function Reports() {
   const [searchParams] = useSearchParams()
-  const [month, setMonth] = useState(searchParams.get('month') || new Date().toISOString().slice(0, 7))
+  const [month, setMonth] = useState(searchParams.get('month') || currentMonthLocal())
   const [report, setReport] = useState(null)
   const [evolution, setEvolution] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [tipoFilter, setTipoFilter] = useState('todos')
   const [categoriaFilter, setCategoriaFilter] = useState('todas')
 
@@ -32,6 +40,7 @@ export default function Reports() {
 
   const fetchReport = async () => {
     setLoading(true)
+    setError('')
     try {
       const [monthlyRes, catRes] = await Promise.all([
         api.get('/reports/monthly', { params: { month } }),
@@ -42,6 +51,7 @@ export default function Reports() {
       setReport({ ...monthlyRes.data, categories: catRes.data })
     } catch (err) {
       console.error(err)
+      setError('Não foi possível carregar o relatório. Verifique sua conexão e tente novamente.')
     } finally {
       setLoading(false)
     }
@@ -153,6 +163,11 @@ export default function Reports() {
 
         {loading ? (
           <div className="loading">Carregando relatório...</div>
+        ) : error ? (
+          <div className="alert alert-error alert-with-action">
+            <span>{error}</span>
+            <button className="btn btn-sm btn-outline" onClick={fetchReport}>Tentar novamente</button>
+          </div>
         ) : report ? (
           <>
             <SummaryCards balance={summary} />

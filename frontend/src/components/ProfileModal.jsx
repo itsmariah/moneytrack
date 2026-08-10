@@ -103,8 +103,9 @@ export default function ProfileModal({ onClose }) {
             </div>
           </div>
           <div className="form-group">
-            <label>Nome</label>
+            <label htmlFor="profile-nome">Nome</label>
             <input
+              id="profile-nome"
               type="text"
               value={form.nome}
               onChange={e => setForm({ ...form, nome: e.target.value })}
@@ -112,8 +113,9 @@ export default function ProfileModal({ onClose }) {
             />
           </div>
           <div className="form-group">
-            <label>E-mail</label>
+            <label htmlFor="profile-email">E-mail</label>
             <input
+              id="profile-email"
               type="email"
               value={form.email}
               onChange={e => setForm({ ...form, email: e.target.value })}
@@ -121,8 +123,9 @@ export default function ProfileModal({ onClose }) {
             />
           </div>
           <div className="form-group">
-            <label>Nova senha (deixe vazio para manter)</label>
+            <label htmlFor="profile-senha">Nova senha (deixe vazio para manter)</label>
             <input
+              id="profile-senha"
               type="password"
               value={form.senha}
               onChange={e => setForm({ ...form, senha: e.target.value })}
@@ -132,8 +135,9 @@ export default function ProfileModal({ onClose }) {
           </div>
           {form.senha && (
             <div className="form-group">
-              <label>Confirmar nova senha</label>
+              <label htmlFor="profile-confirmar">Confirmar nova senha</label>
               <input
+                id="profile-confirmar"
                 type="password"
                 value={form.confirmar}
                 onChange={e => setForm({ ...form, confirmar: e.target.value })}

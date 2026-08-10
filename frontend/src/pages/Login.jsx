@@ -42,8 +42,9 @@ export default function Login() {
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>E-mail</label>
+            <label htmlFor="login-email">E-mail</label>
             <input
+              id="login-email"
               type="email"
               value={form.email}
               onChange={e => setForm({ ...form, email: e.target.value })}
@@ -52,8 +53,9 @@ export default function Login() {
             />
           </div>
           <div className="form-group">
-            <label>Senha</label>
+            <label htmlFor="login-senha">Senha</label>
             <input
+              id="login-senha"
               type="password"
               value={form.senha}
               onChange={e => setForm({ ...form, senha: e.target.value })}

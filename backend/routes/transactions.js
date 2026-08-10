@@ -1,9 +1,33 @@
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const prisma = require('../database/db');
 const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
 router.use(authMiddleware);
+
+const MAX_BULK_ITEMS = 500;
+
+// Limite geral para todas as rotas de transação, por usuário autenticado (não por IP)
+const dataLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => String(req.userId),
+  message: { error: 'Muitas requisições. Tente novamente em alguns minutos.' },
+});
+router.use(dataLimiter);
+
+// Limite mais restrito só para importação em lote, por ser a operação mais custosa
+const bulkImportLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => String(req.userId),
+  message: { error: 'Muitas importações. Tente novamente mais tarde.' },
+});
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -41,11 +65,14 @@ router.get('/', async (req, res) => {
 });
 
 // Importação em lote (OFX)
-router.post('/bulk', async (req, res) => {
+router.post('/bulk', bulkImportLimiter, async (req, res) => {
   try {
     const { transactions } = req.body;
     if (!Array.isArray(transactions) || transactions.length === 0) {
       return res.status(400).json({ error: 'Lista de transações inválida' });
+    }
+    if (transactions.length > MAX_BULK_ITEMS) {
+      return res.status(400).json({ error: `Máximo de ${MAX_BULK_ITEMS} transações por importação` });
     }
     for (const t of transactions) {
       if (!t.tipo || !t.valor || !t.categoria || !t.data) {

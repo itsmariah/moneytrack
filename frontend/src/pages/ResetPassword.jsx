@@ -47,8 +47,9 @@ export default function ResetPassword() {
             {error && <div className="alert alert-error">{error}</div>}
             <form onSubmit={handleSubmit}>
               <div className="form-group">
-                <label>Nova senha</label>
+                <label htmlFor="reset-senha">Nova senha</label>
                 <input
+                  id="reset-senha"
                   type="password"
                   value={form.senha}
                   onChange={e => setForm({ ...form, senha: e.target.value })}
@@ -58,8 +59,9 @@ export default function ResetPassword() {
                 />
               </div>
               <div className="form-group">
-                <label>Confirmar nova senha</label>
+                <label htmlFor="reset-confirmar">Confirmar nova senha</label>
                 <input
+                  id="reset-confirmar"
                   type="password"
                   value={form.confirmar}
                   onChange={e => setForm({ ...form, confirmar: e.target.value })}

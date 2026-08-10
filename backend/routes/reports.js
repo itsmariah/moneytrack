@@ -1,9 +1,21 @@
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const prisma = require('../database/db');
 const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
 router.use(authMiddleware);
+
+// Limite geral para as rotas de relatório, por usuário autenticado (não por IP)
+const dataLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => String(req.userId),
+  message: { error: 'Muitas requisições. Tente novamente em alguns minutos.' },
+});
+router.use(dataLimiter);
 
 // RF09 - Saldo (receitas - despesas)
 router.get('/balance', async (req, res) => {

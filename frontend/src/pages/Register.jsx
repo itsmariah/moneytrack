@@ -41,8 +41,9 @@ export default function Register() {
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Nome completo</label>
+            <label htmlFor="register-nome">Nome completo</label>
             <input
+              id="register-nome"
               type="text"
               value={form.nome}
               onChange={e => setForm({ ...form, nome: e.target.value })}
@@ -51,8 +52,9 @@ export default function Register() {
             />
           </div>
           <div className="form-group">
-            <label>E-mail</label>
+            <label htmlFor="register-email">E-mail</label>
             <input
+              id="register-email"
               type="email"
               value={form.email}
               onChange={e => setForm({ ...form, email: e.target.value })}
@@ -61,8 +63,9 @@ export default function Register() {
             />
           </div>
           <div className="form-group">
-            <label>Senha</label>
+            <label htmlFor="register-senha">Senha</label>
             <input
+              id="register-senha"
               type="password"
               value={form.senha}
               onChange={e => setForm({ ...form, senha: e.target.value })}
@@ -72,8 +75,9 @@ export default function Register() {
             />
           </div>
           <div className="form-group">
-            <label>Confirmar senha</label>
+            <label htmlFor="register-confirmar">Confirmar senha</label>
             <input
+              id="register-confirmar"
               type="password"
               value={form.confirmar}
               onChange={e => setForm({ ...form, confirmar: e.target.value })}

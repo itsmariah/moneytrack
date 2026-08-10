@@ -36,8 +36,9 @@ export default function ForgotPassword() {
         {!message && (
           <form onSubmit={handleSubmit}>
             <div className="form-group">
-              <label>E-mail</label>
+              <label htmlFor="forgot-email">E-mail</label>
               <input
+                id="forgot-email"
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}

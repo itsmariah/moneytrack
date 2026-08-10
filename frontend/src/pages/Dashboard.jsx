@@ -20,8 +20,10 @@ export default function Dashboard() {
   const [showOFXModal, setShowOFXModal] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   const fetchData = useCallback(async () => {
+    setError('')
     try {
       const params = {}
       if (filters.tipo) params.tipo = filters.tipo
@@ -40,6 +42,7 @@ export default function Dashboard() {
       setCategoryData(catRes.data)
     } catch (err) {
       console.error('Erro ao buscar dados:', err)
+      setError('Não foi possível carregar seus dados. Verifique sua conexão e tente novamente.')
     } finally {
       setLoading(false)
     }
@@ -56,6 +59,7 @@ export default function Dashboard() {
       fetchData()
     } catch (err) {
       console.error(err)
+      setError('Não foi possível excluir a transação. Tente novamente.')
     }
   }
 
@@ -100,6 +104,13 @@ export default function Dashboard() {
             </button>
           </div>
         </div>
+
+        {error && (
+          <div className="alert alert-error alert-with-action">
+            <span>{error}</span>
+            <button className="btn btn-sm btn-outline" onClick={fetchData}>Tentar novamente</button>
+          </div>
+        )}
 
         <SummaryCards balance={balance} />
 

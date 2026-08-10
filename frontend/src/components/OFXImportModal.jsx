@@ -137,7 +137,14 @@ export default function OFXImportModal({ onClose, onImported }) {
                 <tbody>
                   {transactions.map(t => (
                     <tr key={t._key} className={t.selected ? '' : 'ofx-row--unselected'}>
-                      <td><input type="checkbox" checked={t.selected} onChange={() => toggle(t._key)} /></td>
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={t.selected}
+                          onChange={() => toggle(t._key)}
+                          aria-label={`Selecionar transação de ${fmt(t.valor)} em ${t.data.split('-').reverse().join('/')}${t.descricao ? ` — ${t.descricao}` : ''}`}
+                        />
+                      </td>
                       <td>
                         <span className={`ofx-badge ofx-badge--${t.tipo}`}>
                           {t.tipo === 'receita' ? '↑ Receita' : '↓ Despesa'}
