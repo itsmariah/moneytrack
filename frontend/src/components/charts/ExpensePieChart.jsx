@@ -1,9 +1,14 @@
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { fmt } from '../../utils/format'
+import { useTheme } from '../../context/ThemeContext'
+import { getChartTheme } from '../../utils/chartTheme'
 
 const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#eab308', '#22c55e', '#14b8a6']
 
 export default function ExpensePieChart({ data, emptyMessage = 'Nenhum dado registrado' }) {
+  const { theme } = useTheme()
+  const chartTheme = getChartTheme(theme)
+
   if (!data || data.length === 0) {
     return <div className="empty-chart">{emptyMessage}</div>
   }
@@ -25,7 +30,7 @@ export default function ExpensePieChart({ data, emptyMessage = 'Nenhum dado regi
           ))}
         </Pie>
         <Tooltip
-          contentStyle={{ background: '#1a1d2e', border: '1px solid #2d3154', borderRadius: 8 }}
+          contentStyle={{ background: chartTheme.tooltipBg, border: `1px solid ${chartTheme.tooltipBorder}`, borderRadius: 8 }}
           formatter={(v) => fmt(v)}
         />
         <Legend wrapperStyle={{ fontSize: 12 }} />

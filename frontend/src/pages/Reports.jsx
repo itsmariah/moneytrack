@@ -9,6 +9,8 @@ import SummaryCards from '../components/SummaryCards'
 import ExpensePieChart from '../components/charts/ExpensePieChart'
 import api from '../services/api'
 import { fmt, fmtDate } from '../utils/format'
+import { useTheme } from '../context/ThemeContext'
+import { getChartTheme } from '../utils/chartTheme'
 
 // new Date().toISOString() é UTC — perto da virada do mês no Brasil (UTC-3) isso pode
 // adiantar o mês padrão exibido. Aqui montamos o mês local manualmente para evitar isso.
@@ -18,6 +20,8 @@ function currentMonthLocal() {
 }
 
 export default function Reports() {
+  const { theme } = useTheme()
+  const chartTheme = getChartTheme(theme)
   const [searchParams] = useSearchParams()
   const [month, setMonth] = useState(searchParams.get('month') || currentMonthLocal())
   const [report, setReport] = useState(null)
@@ -176,11 +180,11 @@ export default function Reports() {
               {evolutionData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={260}>
                   <BarChart data={evolutionData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#2d3154" />
-                    <XAxis dataKey="mes" stroke="#8892a4" tick={{ fontSize: 12 }} />
-                    <YAxis stroke="#8892a4" tick={{ fontSize: 12 }} tickFormatter={v => `R$${(v / 1000).toFixed(0)}k`} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid} />
+                    <XAxis dataKey="mes" stroke={chartTheme.axis} tick={{ fontSize: 12 }} />
+                    <YAxis stroke={chartTheme.axis} tick={{ fontSize: 12 }} tickFormatter={v => `R$${(v / 1000).toFixed(0)}k`} />
                     <Tooltip
-                      contentStyle={{ background: '#1a1d2e', border: '1px solid #2d3154', borderRadius: 8 }}
+                      contentStyle={{ background: chartTheme.tooltipBg, border: `1px solid ${chartTheme.tooltipBorder}`, borderRadius: 8 }}
                       formatter={(v) => fmt(v)}
                     />
                     <Legend />

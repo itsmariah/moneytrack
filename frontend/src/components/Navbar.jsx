@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import ProfileModal from './ProfileModal'
+import ThemeToggle from './ThemeToggle'
 
 export default function Navbar() {
   const { user, logout } = useAuth()
@@ -22,6 +23,7 @@ export default function Navbar() {
       </nav>
 
       <div className="navbar-user">
+        <ThemeToggle />
         <button className="user-btn" onClick={() => setShowProfile(true)}>
           <div className="avatar">
             {user?.foto ? <img src={user.foto} alt="" /> : user?.nome?.[0]?.toUpperCase()}

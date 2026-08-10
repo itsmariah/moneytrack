@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import ThemeToggle from '../components/ThemeToggle'
 import screenshotDashboard from '../../assets/imagens/moneytrack_dashboard.png'
 import screenshotRelatorio from '../../assets/imagens/moneytrack_relatorio.png'
 
@@ -33,6 +34,7 @@ export default function Landing() {
           <a href="#sobre" className="nav-link">Sobre</a>
           <a href="#funcionalidades" className="nav-link">Funcionalidades</a>
           {!isDesktopApp && <a href="#desktop" className="nav-link">Desktop</a>}
+          <ThemeToggle />
           <Link to="/login" className="btn btn-outline btn-sm">Entrar</Link>
           <Link to="/cadastro" className="btn btn-primary btn-sm">Criar conta</Link>
         </div>
