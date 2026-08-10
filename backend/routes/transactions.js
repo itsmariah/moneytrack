@@ -6,6 +6,7 @@ const { validateTransactionInput } = require('../utils/validateTransaction');
 const { parsePagination, buildPaginationMeta } = require('../utils/pagination');
 const { serializeTransaction, serializeTransactions } = require('../utils/serializeTransaction');
 const { buildTransactionWhere } = require('../utils/buildTransactionWhere');
+const { buildTransactionsCsv } = require('../utils/csvExport');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -54,6 +55,26 @@ router.get('/', async (req, res) => {
     res.json({ transactions: serializeTransactions(rawTransactions), ...buildPaginationMeta(pageNum, pageSize, total) });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao listar transações' });
+  }
+});
+
+// Exportação em CSV (respeita os mesmos filtros de tipo/categoria/período/busca da listagem)
+router.get('/export', async (req, res) => {
+  try {
+    const { tipo, categoria, data_inicio, data_fim, busca } = req.query;
+    const where = buildTransactionWhere(req.userId, { tipo, categoria, data_inicio, data_fim, busca });
+
+    const rawTransactions = await prisma.transacao.findMany({
+      where,
+      orderBy: [{ data: 'desc' }, { createdAt: 'desc' }],
+    });
+
+    const csv = buildTransactionsCsv(serializeTransactions(rawTransactions));
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="moneytrack-transacoes.csv"');
+    res.send(csv);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao exportar transações' });
   }
 });
 

@@ -29,6 +29,7 @@ export default function Dashboard() {
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
   const [deleteId, setDeleteId] = useState(null)
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
     if (!toast) return
@@ -36,15 +37,21 @@ export default function Dashboard() {
     return () => clearTimeout(timer)
   }, [toast])
 
+  // Params de filtro compartilhados entre a listagem paginada e a exportação CSV.
+  const buildFilterParams = useCallback(() => {
+    const params = {}
+    if (filters.tipo) params.tipo = filters.tipo
+    if (filters.categoria) params.categoria = filters.categoria
+    if (filters.data_inicio) params.data_inicio = filters.data_inicio
+    if (filters.data_fim) params.data_fim = filters.data_fim
+    if (filters.busca) params.busca = filters.busca
+    return params
+  }, [filters])
+
   const fetchData = useCallback(async () => {
     setError('')
     try {
-      const params = { page, limit: PAGE_SIZE }
-      if (filters.tipo) params.tipo = filters.tipo
-      if (filters.categoria) params.categoria = filters.categoria
-      if (filters.data_inicio) params.data_inicio = filters.data_inicio
-      if (filters.data_fim) params.data_fim = filters.data_fim
-      if (filters.busca) params.busca = filters.busca
+      const params = { ...buildFilterParams(), page, limit: PAGE_SIZE }
 
       const [txRes, balanceRes, catRes] = await Promise.all([
         api.get('/transactions', { params }),
@@ -66,7 +73,7 @@ export default function Dashboard() {
     } finally {
       setLoading(false)
     }
-  }, [filters, page])
+  }, [buildFilterParams, page])
 
   useEffect(() => {
     fetchData()
@@ -101,6 +108,32 @@ export default function Dashboard() {
     setToast(editingTransaction ? 'Transação atualizada com sucesso.' : 'Transação adicionada com sucesso.')
     handleModalClose()
     fetchData()
+  }
+
+  const handleExportCsv = async () => {
+    setExporting(true)
+    setError('')
+    try {
+      const res = await api.get('/transactions/export', {
+        params: buildFilterParams(),
+        responseType: 'blob',
+      })
+      const url = URL.createObjectURL(res.data)
+      const now = new Date()
+      const dataArquivo = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `moneytrack-transacoes-${dataArquivo}.csv`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error(err)
+      setError('Não foi possível exportar as transações. Tente novamente.')
+    } finally {
+      setExporting(false)
+    }
   }
 
   // Sempre volta para a página 1 ao mudar um filtro — senão o usuário pode ficar numa
@@ -145,6 +178,9 @@ export default function Dashboard() {
         <div className="dashboard-header">
           <h2>Olá, {user?.nome?.split(' ')[0]} 👋</h2>
           <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-outline" onClick={handleExportCsv} disabled={exporting}>
+              {exporting ? 'Exportando...' : '↓ Exportar CSV'}
+            </button>
             <button className="btn btn-outline" onClick={() => setShowOFXModal(true)}>
               ↓ Importar OFX
             </button>
