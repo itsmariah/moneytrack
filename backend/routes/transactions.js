@@ -4,6 +4,7 @@ const prisma = require('../database/db');
 const authMiddleware = require('../middleware/auth');
 const { validateTransactionInput } = require('../utils/validateTransaction');
 const { parsePagination, buildPaginationMeta } = require('../utils/pagination');
+const { serializeTransaction, serializeTransactions } = require('../utils/serializeTransaction');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -47,7 +48,7 @@ router.get('/', async (req, res) => {
 
     const { page: pageNum, limit: pageSize, skip } = parsePagination(page, limit);
 
-    const [transactions, total] = await Promise.all([
+    const [rawTransactions, total] = await Promise.all([
       prisma.transacao.findMany({
         where,
         orderBy: [{ data: 'desc' }, { createdAt: 'desc' }],
@@ -57,7 +58,7 @@ router.get('/', async (req, res) => {
       prisma.transacao.count({ where }),
     ]);
 
-    res.json({ transactions, ...buildPaginationMeta(pageNum, pageSize, total) });
+    res.json({ transactions: serializeTransactions(rawTransactions), ...buildPaginationMeta(pageNum, pageSize, total) });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao listar transações' });
   }
@@ -111,7 +112,7 @@ router.post('/', async (req, res) => {
         data,
       },
     });
-    res.status(201).json(created);
+    res.status(201).json(serializeTransaction(created));
   } catch (err) {
     res.status(500).json({ error: 'Erro ao criar transação' });
   }
@@ -133,7 +134,7 @@ router.put('/:id', async (req, res) => {
       where: { id },
       data: { tipo, valor: Number(valor), categoria, descricao: descricao || '', data },
     });
-    res.json(updated);
+    res.json(serializeTransaction(updated));
   } catch (err) {
     res.status(500).json({ error: 'Erro ao atualizar transação' });
   }

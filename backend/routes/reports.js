@@ -8,6 +8,7 @@ const {
   getMonthDateRange,
   buildMonthlyEvolution,
 } = require('../utils/reportCalculations');
+const { serializeTransactions } = require('../utils/serializeTransaction');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -40,7 +41,9 @@ router.get('/balance', async (req, res) => {
       _sum: { valor: true },
     });
 
-    res.json(calculateBalance(rows));
+    // _sum.valor vem como Prisma.Decimal — convertemos para number antes de somar/subtrair.
+    const normalized = rows.map(r => ({ tipo: r.tipo, _sum: { valor: Number(r._sum.valor) } }));
+    res.json(calculateBalance(normalized));
   } catch (err) {
     res.status(500).json({ error: 'Erro ao calcular saldo' });
   }
@@ -56,7 +59,7 @@ router.get('/monthly', async (req, res) => {
 
     const { start, end } = getMonthDateRange(month);
 
-    const transactions = await prisma.transacao.findMany({
+    const rawTransactions = await prisma.transacao.findMany({
       where: {
         usuarioId: req.userId,
         data: { gte: start, lte: end },
@@ -64,6 +67,7 @@ router.get('/monthly', async (req, res) => {
       orderBy: { data: 'asc' },
     });
 
+    const transactions = serializeTransactions(rawTransactions);
     res.json({ month, transactions, resumo: summarizeTransactions(transactions) });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao gerar relatório' });
@@ -88,7 +92,7 @@ router.get('/categories', async (req, res) => {
       orderBy: { _sum: { valor: 'desc' } },
     });
 
-    res.json(rows.map(r => ({ categoria: r.categoria, tipo: r.tipo, total: r._sum.valor })));
+    res.json(rows.map(r => ({ categoria: r.categoria, tipo: r.tipo, total: Number(r._sum.valor) })));
   } catch (err) {
     res.status(500).json({ error: 'Erro ao buscar categorias' });
   }
@@ -102,12 +106,12 @@ router.get('/evolution', async (req, res) => {
     sixMonthsAgo.setDate(1);
     const startDate = sixMonthsAgo.toISOString().slice(0, 10);
 
-    const transactions = await prisma.transacao.findMany({
+    const rawTransactions = await prisma.transacao.findMany({
       where: { usuarioId: req.userId, data: { gte: startDate } },
       select: { tipo: true, valor: true, data: true },
     });
 
-    res.json(buildMonthlyEvolution(transactions));
+    res.json(buildMonthlyEvolution(serializeTransactions(rawTransactions)));
   } catch (err) {
     res.status(500).json({ error: 'Erro ao buscar evolução' });
   }

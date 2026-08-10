@@ -23,7 +23,7 @@ model Transacao {
   id        Int      @id @default(autoincrement())
   usuarioId Int
   tipo      String
-  valor     Float
+  valor     Decimal  @db.Decimal(12, 2)
   categoria String
   descricao String   @default("")
   data      String

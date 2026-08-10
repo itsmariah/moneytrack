@@ -298,7 +298,7 @@ O banco é **PostgreSQL**, acessado via Prisma ORM a partir da string de conexã
 | id | Int (PK) | Identificador único |
 | usuarioId | Int (FK) | Referência ao usuário |
 | tipo | String | `receita` ou `despesa` |
-| valor | Float | Valor em reais |
+| valor | Decimal(12,2) | Valor em reais (armazenamento exato, sem ruído de ponto flutuante) |
 | categoria | String | Ex: Salário, Alimentação... |
 | descricao | String | Descrição opcional |
 | data | String | Data no formato YYYY-MM-DD |
