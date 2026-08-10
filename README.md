@@ -1,27 +1,14 @@
 # 💰 MoneyTrack
 
-> Sistema de gestão financeira pessoal — Projeto Acadêmico | Programação de Computadores 2026.1
+> Gestão financeira pessoal com dashboard, relatórios e importação de extratos bancários (OFX).
 
-![Status](https://img.shields.io/badge/status-em%20desenvolvimento-yellow)
+![Status](https://img.shields.io/badge/status-ativo-brightgreen)
 ![Frontend](https://img.shields.io/badge/frontend-React%20%7C%20Vite-61dafb)
 ![Backend](https://img.shields.io/badge/backend-Node.js%20%7C%20Express-green)
 ![Database](https://img.shields.io/badge/banco-PostgreSQL%20%7C%20Prisma-blue)
 ![Desktop](https://img.shields.io/badge/desktop-Electron-47848f)
 
 **🔗 Acesse online:** [moneytrack-m4dd.vercel.app](https://moneytrack-m4dd.vercel.app)
-
----
-
-## 👥 Equipe
-
-| Nome | GitHub |
-|------|--------|
-| Mariah | [@itsmariah](https://github.com/itsmariah) |
-| Jefferson | [@FIDEL7Z](https://github.com/FIDEL7Z) |
-| Diogo | — |
-| Weslley | — |
-
-**Professor:** Edkallenn Lima
 
 ---
 

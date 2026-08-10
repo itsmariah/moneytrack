@@ -8,9 +8,7 @@ import Navbar from '../components/Navbar'
 import SummaryCards from '../components/SummaryCards'
 import ExpensePieChart from '../components/charts/ExpensePieChart'
 import api from '../services/api'
-
-const fmt = (n) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n)
-const fmtDate = (d) => new Date(d + 'T00:00:00').toLocaleDateString('pt-BR')
+import { fmt, fmtDate } from '../utils/format'
 
 // new Date().toISOString() é UTC — perto da virada do mês no Brasil (UTC-3) isso pode
 // adiantar o mês padrão exibido. Aqui montamos o mês local manualmente para evitar isso.

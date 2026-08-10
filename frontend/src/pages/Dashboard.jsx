@@ -7,6 +7,7 @@ import TransactionModal from '../components/TransactionModal'
 import TransactionList from '../components/TransactionList'
 import ExpensePieChart from '../components/charts/ExpensePieChart'
 import OFXImportModal from '../components/OFXImportModal'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 import { TODAS_CATEGORIAS } from '../utils/categories'
 
@@ -21,6 +22,14 @@ export default function Dashboard() {
   const [editingTransaction, setEditingTransaction] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [toast, setToast] = useState('')
+  const [deleteId, setDeleteId] = useState(null)
+
+  useEffect(() => {
+    if (!toast) return
+    const timer = setTimeout(() => setToast(''), 3000)
+    return () => clearTimeout(timer)
+  }, [toast])
 
   const fetchData = useCallback(async () => {
     setError('')
@@ -52,10 +61,14 @@ export default function Dashboard() {
     fetchData()
   }, [fetchData])
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Excluir esta transação?')) return
+  const handleDelete = (id) => setDeleteId(id)
+
+  const confirmDelete = async () => {
+    const id = deleteId
+    setDeleteId(null)
     try {
       await api.delete(`/transactions/${id}`)
+      setToast('Transação excluída.')
       fetchData()
     } catch (err) {
       console.error(err)
@@ -74,6 +87,7 @@ export default function Dashboard() {
   }
 
   const handleSaved = () => {
+    setToast(editingTransaction ? 'Transação atualizada com sucesso.' : 'Transação adicionada com sucesso.')
     handleModalClose()
     fetchData()
   }
@@ -186,6 +200,18 @@ export default function Dashboard() {
           onImported={fetchData}
         />
       )}
+
+      {deleteId !== null && (
+        <ConfirmDialog
+          title="Excluir transação"
+          message="Tem certeza que deseja excluir esta transação? Essa ação não pode ser desfeita."
+          confirmLabel="Excluir"
+          onConfirm={confirmDelete}
+          onCancel={() => setDeleteId(null)}
+        />
+      )}
+
+      {toast && <div className="toast">{toast}</div>}
     </div>
   )
 }

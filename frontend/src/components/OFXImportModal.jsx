@@ -2,8 +2,9 @@ import { useState, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { readOFXFile, parseOFX } from '../utils/ofxParser'
 import { TODAS_CATEGORIAS } from '../utils/categories'
+import { fmt } from '../utils/format'
 import api from '../services/api'
-const fmt = (n) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n)
+import Modal from './Modal'
 
 export default function OFXImportModal({ onClose, onImported }) {
   const navigate = useNavigate()
@@ -81,12 +82,11 @@ export default function OFXImportModal({ onClose, onImported }) {
   const totalDespesas = selected.filter(t => t.tipo === 'despesa').reduce((s, t) => s + t.valor, 0)
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal modal-wide" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3>Importar OFX</h3>
-          <button className="modal-close" onClick={onClose}>✕</button>
-        </div>
+    <Modal onClose={onClose} wide>
+      <div className="modal-header">
+        <h3>Importar OFX</h3>
+        <button className="modal-close" onClick={onClose}>✕</button>
+      </div>
 
         {error && <div className="alert alert-error">{error}</div>}
 
@@ -216,7 +216,6 @@ export default function OFXImportModal({ onClose, onImported }) {
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </Modal>
   )
 }

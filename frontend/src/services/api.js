@@ -14,10 +14,16 @@ if (token) {
   api.defaults.headers.common['Authorization'] = `Bearer ${token}`
 }
 
+// Rotas onde um 401 significa "credenciais inválidas" (não "sessão expirada") —
+// o formulário da própria página já mostra o erro, então o interceptor não deve
+// forçar um redirecionamento/reload por cima dessa mensagem.
+const AUTH_ROUTES_WITHOUT_SESSION = ['/auth/login', '/auth/register']
+
 api.interceptors.response.use(
   res => res,
   err => {
-    if (err.response?.status === 401) {
+    const isAuthRoute = AUTH_ROUTES_WITHOUT_SESSION.some(path => err.config?.url?.includes(path))
+    if (err.response?.status === 401 && !isAuthRoute) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       window.location.href = '/login'

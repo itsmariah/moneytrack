@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { resizeImage } from '../utils/resizeImage'
+import Modal from './Modal'
 
 export default function ProfileModal({ onClose }) {
   const { user, updateProfile } = useAuth()
@@ -71,12 +72,11 @@ export default function ProfileModal({ onClose }) {
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3>Editar Perfil</h3>
-          <button className="modal-close" onClick={onClose}>✕</button>
-        </div>
+    <Modal onClose={onClose}>
+      <div className="modal-header">
+        <h3>Editar Perfil</h3>
+        <button className="modal-close" onClick={onClose}>✕</button>
+      </div>
 
         {error && <div className="alert alert-error">{error}</div>}
         {success && <div className="alert alert-success">{success}</div>}
@@ -152,7 +152,6 @@ export default function ProfileModal({ onClose }) {
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   )
 }

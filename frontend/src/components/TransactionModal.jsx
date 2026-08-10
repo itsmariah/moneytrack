@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import api from '../services/api'
 import { categoriasPorTipo } from '../utils/categories'
+import Modal from './Modal'
 
 // new Date().toISOString() é UTC — perto da meia-noite no Brasil (UTC-3) isso adianta
 // a data em um dia. Aqui montamos a data local manualmente para evitar esse desvio.
@@ -72,12 +73,11 @@ export default function TransactionModal({ transaction, onClose, onSaved }) {
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3>{transaction ? 'Editar Transação' : 'Nova Transação'}</h3>
-          <button className="modal-close" onClick={onClose}>✕</button>
-        </div>
+    <Modal onClose={onClose}>
+      <div className="modal-header">
+        <h3>{transaction ? 'Editar Transação' : 'Nova Transação'}</h3>
+        <button className="modal-close" onClick={onClose}>✕</button>
+      </div>
 
         {error && <div className="alert alert-error">{error}</div>}
 
@@ -170,7 +170,6 @@ export default function TransactionModal({ transaction, onClose, onSaved }) {
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   )
 }
