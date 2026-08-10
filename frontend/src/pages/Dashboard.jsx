@@ -11,12 +11,16 @@ import ConfirmDialog from '../components/ConfirmDialog'
 
 import { TODAS_CATEGORIAS } from '../utils/categories'
 
+const PAGE_SIZE = 50
+
 export default function Dashboard() {
   const { user } = useAuth()
   const [transactions, setTransactions] = useState([])
   const [balance, setBalance] = useState({ receitas: 0, despesas: 0, saldo: 0 })
   const [categoryData, setCategoryData] = useState([])
   const [filters, setFilters] = useState({ tipo: '', categoria: '', data_inicio: '', data_fim: '' })
+  const [page, setPage] = useState(1)
+  const [pagination, setPagination] = useState({ total: 0, totalPages: 1 })
   const [showModal, setShowModal] = useState(false)
   const [showOFXModal, setShowOFXModal] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState(null)
@@ -34,7 +38,7 @@ export default function Dashboard() {
   const fetchData = useCallback(async () => {
     setError('')
     try {
-      const params = {}
+      const params = { page, limit: PAGE_SIZE }
       if (filters.tipo) params.tipo = filters.tipo
       if (filters.categoria) params.categoria = filters.categoria
       if (filters.data_inicio) params.data_inicio = filters.data_inicio
@@ -46,7 +50,12 @@ export default function Dashboard() {
         api.get('/reports/categories'),
       ])
 
-      setTransactions(txRes.data)
+      setTransactions(txRes.data.transactions)
+      setPagination({ total: txRes.data.total, totalPages: txRes.data.totalPages })
+      // Se a página atual ficou vazia (ex: excluiu a última transação da última página), volta uma página.
+      if (txRes.data.page > txRes.data.totalPages) {
+        setPage(txRes.data.totalPages)
+      }
       setBalance(balanceRes.data)
       setCategoryData(catRes.data)
     } catch (err) {
@@ -55,7 +64,7 @@ export default function Dashboard() {
     } finally {
       setLoading(false)
     }
-  }, [filters])
+  }, [filters, page])
 
   useEffect(() => {
     fetchData()
@@ -92,8 +101,18 @@ export default function Dashboard() {
     fetchData()
   }
 
+  // Sempre volta para a página 1 ao mudar um filtro — senão o usuário pode ficar numa
+  // página que não existe mais no resultado filtrado.
+  const updateFilters = (partial) => {
+    setFilters(f => ({ ...f, ...partial }))
+    setPage(1)
+  }
+
   const hasFilters = filters.tipo || filters.categoria || filters.data_inicio || filters.data_fim
-  const clearFilters = () => setFilters({ tipo: '', categoria: '', data_inicio: '', data_fim: '' })
+  const clearFilters = () => {
+    setFilters({ tipo: '', categoria: '', data_inicio: '', data_fim: '' })
+    setPage(1)
+  }
 
   const despesasByCategory = categoryData
     .filter(d => d.tipo === 'despesa')
@@ -133,25 +152,25 @@ export default function Dashboard() {
             <div className="section-header">
               <h3>Transações</h3>
               <div className="filters">
-                <select value={filters.tipo} onChange={e => setFilters({ ...filters, tipo: e.target.value })}>
+                <select value={filters.tipo} onChange={e => updateFilters({ tipo: e.target.value })}>
                   <option value="">Todos os tipos</option>
                   <option value="receita">Receitas</option>
                   <option value="despesa">Despesas</option>
                 </select>
-                <select value={filters.categoria} onChange={e => setFilters({ ...filters, categoria: e.target.value })}>
+                <select value={filters.categoria} onChange={e => updateFilters({ categoria: e.target.value })}>
                   <option value="">Todas as categorias</option>
                   {TODAS_CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
                 <input
                   type="date"
                   value={filters.data_inicio}
-                  onChange={e => setFilters({ ...filters, data_inicio: e.target.value })}
+                  onChange={e => updateFilters({ data_inicio: e.target.value })}
                   title="Data início"
                 />
                 <input
                   type="date"
                   value={filters.data_fim}
-                  onChange={e => setFilters({ ...filters, data_fim: e.target.value })}
+                  onChange={e => updateFilters({ data_fim: e.target.value })}
                   title="Data fim"
                 />
                 {hasFilters && (
@@ -165,11 +184,34 @@ export default function Dashboard() {
             {loading ? (
               <div className="loading">Carregando transações...</div>
             ) : (
-              <TransactionList
-                transactions={transactions}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-              />
+              <>
+                <TransactionList
+                  transactions={transactions}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                />
+                {pagination.totalPages > 1 && (
+                  <div className="pagination">
+                    <button
+                      className="btn btn-sm btn-outline"
+                      disabled={page <= 1}
+                      onClick={() => setPage(p => p - 1)}
+                    >
+                      ← Anterior
+                    </button>
+                    <span className="pagination-info">
+                      Página {page} de {pagination.totalPages} · {pagination.total} transação(ões)
+                    </span>
+                    <button
+                      className="btn btn-sm btn-outline"
+                      disabled={page >= pagination.totalPages}
+                      onClick={() => setPage(p => p + 1)}
+                    >
+                      Próxima →
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
 

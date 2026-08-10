@@ -3,6 +3,7 @@ const rateLimit = require('express-rate-limit');
 const prisma = require('../database/db');
 const authMiddleware = require('../middleware/auth');
 const { validateTransactionInput } = require('../utils/validateTransaction');
+const { parsePagination, buildPaginationMeta } = require('../utils/pagination');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -30,10 +31,10 @@ const bulkImportLimiter = rateLimit({
   message: { error: 'Muitas importações. Tente novamente mais tarde.' },
 });
 
-// RF08 - Listar transações (com filtros RF10 e RF11)
+// RF08 - Listar transações (com filtros RF10 e RF11), paginada
 router.get('/', async (req, res) => {
   try {
-    const { tipo, categoria, data_inicio, data_fim } = req.query;
+    const { tipo, categoria, data_inicio, data_fim, page, limit } = req.query;
 
     const where = { usuarioId: req.userId };
     if (tipo) where.tipo = tipo;
@@ -44,11 +45,19 @@ router.get('/', async (req, res) => {
       if (data_fim) where.data.lte = data_fim;
     }
 
-    const transactions = await prisma.transacao.findMany({
-      where,
-      orderBy: [{ data: 'desc' }, { createdAt: 'desc' }],
-    });
-    res.json(transactions);
+    const { page: pageNum, limit: pageSize, skip } = parsePagination(page, limit);
+
+    const [transactions, total] = await Promise.all([
+      prisma.transacao.findMany({
+        where,
+        orderBy: [{ data: 'desc' }, { createdAt: 'desc' }],
+        skip,
+        take: pageSize,
+      }),
+      prisma.transacao.count({ where }),
+    ]);
+
+    res.json({ transactions, ...buildPaginationMeta(pageNum, pageSize, total) });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao listar transações' });
   }
