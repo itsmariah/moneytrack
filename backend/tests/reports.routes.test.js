@@ -1,4 +1,4 @@
-import { vi, describe, it, expect, afterEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import request from 'supertest';
 import { Prisma } from '@prisma/client';
 import { createTestApp } from './testApp.js';
@@ -9,6 +9,11 @@ import { makeToken } from './makeToken.js';
 const prisma = require('../database/db');
 const app = createTestApp();
 const token = makeToken(7);
+
+beforeEach(() => {
+  // authMiddleware confere tokenVersion a cada requisição autenticada.
+  vi.spyOn(prisma.usuario, 'findUnique').mockResolvedValue({ tokenVersion: 0 });
+});
 
 afterEach(() => {
   vi.restoreAllMocks();

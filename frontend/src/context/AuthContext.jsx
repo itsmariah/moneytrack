@@ -44,7 +44,14 @@ export function AuthProvider({ children }) {
 
   const updateProfile = async (payload) => {
     const { data } = await api.put('/auth/profile', payload)
-    const updated = { ...user, ...data }
+    // Trocar a senha invalida o token anterior no backend — quando isso acontece,
+    // a resposta traz um token novo, que precisa substituir o salvo localmente.
+    const { token, ...userFields } = data
+    if (token) {
+      localStorage.setItem('token', token)
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+    }
+    const updated = { ...user, ...userFields }
     localStorage.setItem('user', JSON.stringify(updated))
     setUser(updated)
     return updated

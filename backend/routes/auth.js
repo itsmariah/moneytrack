@@ -6,6 +6,7 @@ const rateLimit = require('express-rate-limit');
 const prisma = require('../database/db');
 const authMiddleware = require('../middleware/auth');
 const { sendPasswordResetEmail } = require('../utils/mailer');
+const { hashResetToken } = require('../utils/resetToken');
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -58,7 +59,7 @@ router.post('/register', registerLimiter, async (req, res) => {
     const hash = await bcrypt.hash(senha, 10);
     const user = await prisma.usuario.create({ data: { nome, email, senha: hash } });
 
-    const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ id: user.id, tokenVersion: user.tokenVersion }, JWT_SECRET, { expiresIn: '7d' });
     res.status(201).json({ token, user: { id: user.id, nome: user.nome, email: user.email, foto: user.foto } });
   } catch (err) {
     res.status(500).json({ error: 'Erro interno do servidor' });
@@ -78,7 +79,7 @@ router.post('/login', loginLimiter, async (req, res) => {
       return res.status(401).json({ error: 'E-mail ou senha incorretos' });
     }
 
-    const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ id: user.id, tokenVersion: user.tokenVersion }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ token, user: { id: user.id, nome: user.nome, email: user.email, foto: user.foto } });
   } catch (err) {
     res.status(500).json({ error: 'Erro interno do servidor' });
@@ -102,9 +103,10 @@ router.post('/forgot-password', forgotPasswordLimiter, async (req, res) => {
       const resetToken = crypto.randomBytes(32).toString('hex');
       const resetTokenExpiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS);
 
+      // Só o hash fica salvo no banco — o token em texto puro só existe no e-mail enviado.
       await prisma.usuario.update({
         where: { id: user.id },
-        data: { resetToken, resetTokenExpiresAt },
+        data: { resetTokenHash: hashResetToken(resetToken), resetTokenExpiresAt },
       });
 
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -131,7 +133,7 @@ router.post('/reset-password', loginLimiter, async (req, res) => {
       return res.status(400).json({ error: 'A senha deve ter no mínimo 6 caracteres' });
     }
 
-    const user = await prisma.usuario.findUnique({ where: { resetToken: token } });
+    const user = await prisma.usuario.findUnique({ where: { resetTokenHash: hashResetToken(token) } });
     if (!user || !user.resetTokenExpiresAt || user.resetTokenExpiresAt < new Date()) {
       return res.status(400).json({ error: 'Link de redefinição inválido ou expirado' });
     }
@@ -139,7 +141,13 @@ router.post('/reset-password', loginLimiter, async (req, res) => {
     const hash = await bcrypt.hash(senha, 10);
     await prisma.usuario.update({
       where: { id: user.id },
-      data: { senha: hash, resetToken: null, resetTokenExpiresAt: null },
+      // Incrementa tokenVersion para invalidar qualquer token JWT emitido antes da troca.
+      data: {
+        senha: hash,
+        resetTokenHash: null,
+        resetTokenExpiresAt: null,
+        tokenVersion: { increment: 1 },
+      },
     });
 
     res.json({ message: 'Senha redefinida com sucesso' });
@@ -190,9 +198,13 @@ router.put('/profile', authMiddleware, async (req, res) => {
     if (nome) data.nome = nome;
     if (email) data.email = email;
     if (foto !== undefined) data.foto = foto;
-    if (senha) {
+    const trocandoSenha = Boolean(senha);
+    if (trocandoSenha) {
       if (senha.length < 6) return res.status(400).json({ error: 'A senha deve ter no mínimo 6 caracteres' });
       data.senha = await bcrypt.hash(senha, 10);
+      // Invalida o token JWT atual (e qualquer outro emitido antes desta troca) —
+      // por isso reemitimos um novo abaixo, para não deslogar o usuário sem aviso.
+      data.tokenVersion = { increment: 1 };
     }
 
     if (Object.keys(data).length === 0) {
@@ -202,9 +214,15 @@ router.put('/profile', authMiddleware, async (req, res) => {
     const updated = await prisma.usuario.update({
       where: { id: req.userId },
       data,
-      select: { id: true, nome: true, email: true, foto: true },
+      select: { id: true, nome: true, email: true, foto: true, tokenVersion: true },
     });
-    res.json(updated);
+
+    const { tokenVersion, ...userFields } = updated;
+    const response = { ...userFields };
+    if (trocandoSenha) {
+      response.token = jwt.sign({ id: updated.id, tokenVersion }, JWT_SECRET, { expiresIn: '7d' });
+    }
+    res.json(response);
   } catch (err) {
     res.status(500).json({ error: 'Erro interno do servidor' });
   }

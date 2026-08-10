@@ -287,8 +287,9 @@ O banco é **PostgreSQL**, acessado via Prisma ORM a partir da string de conexã
 | email | String (único) | E-mail de login |
 | senha | String | Senha criptografada (bcrypt) |
 | foto | String? | Foto de perfil (base64), opcional |
-| resetToken | String? (único) | Token de redefinição de senha, opcional |
+| resetTokenHash | String? (único) | Hash (sha256) do token de redefinição de senha, opcional |
 | resetTokenExpiresAt | DateTime? | Expiração do token de redefinição |
+| tokenVersion | Int | Incrementado ao trocar a senha, invalida tokens JWT antigos |
 | createdAt | DateTime | Data de cadastro |
 
 **Tabela: Transacao**
@@ -311,8 +312,10 @@ O banco é **PostgreSQL**, acessado via Prisma ORM a partir da string de conexã
 ## 🔐 Segurança
 
 - Senhas armazenadas com hash **bcrypt** (fator 10) — nunca em texto puro
-- Autenticação via **JWT** com expiração de 7 dias, segredo obrigatório via `JWT_SECRET` (o servidor recusa iniciar sem essa variável)
-- Rate limiting em `/auth/login`, `/auth/register`, `/auth/forgot-password` e `/auth/reset-password`
+- Autenticação via **JWT** (algoritmo fixado em `HS256`) com expiração de 7 dias, segredo obrigatório via `JWT_SECRET` (o servidor recusa iniciar sem essa variável)
+- Trocar a senha invalida qualquer token JWT emitido antes disso (`tokenVersion`), mesmo dentro da janela de 7 dias
+- Token de redefinição de senha armazenado como hash (sha256), nunca em texto puro
+- Rate limiting em `/auth/login`, `/auth/register`, `/auth/forgot-password`, `/auth/reset-password` e em todas as rotas de transações/relatórios
 - Cabeçalhos de segurança via `helmet`
 - Todas as rotas de transações e relatórios exigem token válido
 - Cada usuário só acessa suas próprias transações

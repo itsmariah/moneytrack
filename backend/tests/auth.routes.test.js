@@ -1,8 +1,8 @@
-import { vi, describe, it, expect, afterEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import request from 'supertest';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 import { createTestApp } from './testApp.js';
+import { makeToken } from './makeToken.js';
 
 // O Prisma Client é um singleton cacheado pelo Node (database/db.js faz
 // `module.exports = new PrismaClient()`) — o mesmo require() que a rota usa.
@@ -12,6 +12,11 @@ import { createTestApp } from './testApp.js';
 const prisma = require('../database/db');
 const app = createTestApp();
 
+beforeEach(() => {
+  // authMiddleware confere tokenVersion a cada requisição autenticada.
+  vi.spyOn(prisma.usuario, 'findUnique').mockResolvedValue({ tokenVersion: 0 });
+});
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
@@ -19,7 +24,7 @@ afterEach(() => {
 describe('POST /api/auth/register', () => {
   it('cria um usuário e retorna token + dados básicos (201)', async () => {
     vi.spyOn(prisma.usuario, 'findUnique').mockResolvedValue(null);
-    vi.spyOn(prisma.usuario, 'create').mockResolvedValue({ id: 1, nome: 'Ana', email: 'ana@example.com', foto: null });
+    vi.spyOn(prisma.usuario, 'create').mockResolvedValue({ id: 1, nome: 'Ana', email: 'ana@example.com', foto: null, tokenVersion: 0 });
 
     const res = await request(app)
       .post('/api/auth/register')
@@ -66,7 +71,7 @@ describe('POST /api/auth/login', () => {
   it('retorna token com credenciais corretas (200)', async () => {
     const hash = await bcrypt.hash('123456', 10);
     vi.spyOn(prisma.usuario, 'findUnique').mockResolvedValue({
-      id: 1, nome: 'Ana', email: 'ana@example.com', senha: hash, foto: null,
+      id: 1, nome: 'Ana', email: 'ana@example.com', senha: hash, foto: null, tokenVersion: 0,
     });
 
     const res = await request(app).post('/api/auth/login').send({ email: 'ana@example.com', senha: '123456' });
@@ -77,7 +82,7 @@ describe('POST /api/auth/login', () => {
 
   it('retorna 401 com senha incorreta', async () => {
     const hash = await bcrypt.hash('123456', 10);
-    vi.spyOn(prisma.usuario, 'findUnique').mockResolvedValue({ id: 1, senha: hash });
+    vi.spyOn(prisma.usuario, 'findUnique').mockResolvedValue({ id: 1, senha: hash, tokenVersion: 0 });
 
     const res = await request(app).post('/api/auth/login').send({ email: 'ana@example.com', senha: 'errada' });
 
@@ -106,15 +111,26 @@ describe('GET /api/auth/me', () => {
   });
 
   it('retorna os dados do usuário autenticado pelo token (200)', async () => {
+    // Mesma chamada mockada serve ao authMiddleware (lê tokenVersion) e à rota (lê os demais campos).
     const findSpy = vi.spyOn(prisma.usuario, 'findUnique')
-      .mockResolvedValue({ id: 42, nome: 'Ana', email: 'ana@example.com', foto: null });
-    const token = jwt.sign({ id: 42 }, process.env.JWT_SECRET);
+      .mockResolvedValue({ id: 42, nome: 'Ana', email: 'ana@example.com', foto: null, tokenVersion: 0 });
+    const token = makeToken(42, 0);
 
     const res = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
     expect(res.body.nome).toBe('Ana');
     expect(findSpy).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 42 } }));
+  });
+
+  it('retorna 401 quando o token tem uma tokenVersion desatualizada (senha foi trocada)', async () => {
+    // Usuário já trocou a senha (tokenVersion=1 no banco), mas o token ainda carrega a versão antiga (0).
+    vi.spyOn(prisma.usuario, 'findUnique').mockResolvedValue({ tokenVersion: 1 });
+    const staleToken = makeToken(1, 0);
+
+    const res = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${staleToken}`);
+
+    expect(res.status).toBe(401);
   });
 });
 
@@ -124,9 +140,9 @@ describe('PUT /api/auth/profile', () => {
     expect(res.status).toBe(401);
   });
 
-  it('atualiza o nome do usuário autenticado (200)', async () => {
-    vi.spyOn(prisma.usuario, 'update').mockResolvedValue({ id: 1, nome: 'Novo Nome', email: 'ana@example.com', foto: null });
-    const token = jwt.sign({ id: 1 }, process.env.JWT_SECRET);
+  it('atualiza o nome sem trocar a senha — não reemite token (200)', async () => {
+    vi.spyOn(prisma.usuario, 'update').mockResolvedValue({ id: 1, nome: 'Novo Nome', email: 'ana@example.com', foto: null, tokenVersion: 0 });
+    const token = makeToken(1, 0);
 
     const res = await request(app)
       .put('/api/auth/profile')
@@ -135,11 +151,12 @@ describe('PUT /api/auth/profile', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.nome).toBe('Novo Nome');
+    expect(res.body.token).toBeUndefined();
   });
 
   it('rejeita e-mail já usado por outro usuário (409)', async () => {
     vi.spyOn(prisma.usuario, 'findFirst').mockResolvedValue({ id: 2, email: 'outro@example.com' });
-    const token = jwt.sign({ id: 1 }, process.env.JWT_SECRET);
+    const token = makeToken(1, 0);
 
     const res = await request(app)
       .put('/api/auth/profile')
@@ -147,5 +164,61 @@ describe('PUT /api/auth/profile', () => {
       .send({ email: 'outro@example.com' });
 
     expect(res.status).toBe(409);
+  });
+
+  it('ao trocar a senha, incrementa tokenVersion e reemite um token novo (200)', async () => {
+    const updateSpy = vi.spyOn(prisma.usuario, 'update')
+      .mockResolvedValue({ id: 1, nome: 'Ana', email: 'ana@example.com', foto: null, tokenVersion: 1 });
+    const token = makeToken(1, 0);
+
+    const res = await request(app)
+      .put('/api/auth/profile')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ senha: 'novaSenha123' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.token).toBeTruthy();
+    expect(updateSpy.mock.calls[0][0].data.tokenVersion).toEqual({ increment: 1 });
+  });
+});
+
+describe('POST /api/auth/forgot-password', () => {
+  it('salva um hash do token no banco, nunca o valor em texto puro', async () => {
+    vi.spyOn(prisma.usuario, 'findUnique').mockResolvedValue({ id: 1, email: 'ana@example.com' });
+    const updateSpy = vi.spyOn(prisma.usuario, 'update').mockResolvedValue({});
+
+    const res = await request(app).post('/api/auth/forgot-password').send({ email: 'ana@example.com' });
+
+    expect(res.status).toBe(200);
+    const savedHash = updateSpy.mock.calls[0][0].data.resetTokenHash;
+    expect(savedHash).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it('responde com a mesma mensagem genérica mesmo se o e-mail não existir', async () => {
+    vi.spyOn(prisma.usuario, 'findUnique').mockResolvedValue(null);
+    const res = await request(app).post('/api/auth/forgot-password').send({ email: 'naoexiste@example.com' });
+    expect(res.status).toBe(200);
+    expect(res.body.message).toMatch(/estiver cadastrado/);
+  });
+});
+
+describe('POST /api/auth/reset-password', () => {
+  it('redefine a senha com um token válido e incrementa tokenVersion', async () => {
+    vi.spyOn(prisma.usuario, 'findUnique').mockResolvedValue({
+      id: 1, resetTokenExpiresAt: new Date(Date.now() + 60_000),
+    });
+    const updateSpy = vi.spyOn(prisma.usuario, 'update').mockResolvedValue({});
+
+    const res = await request(app).post('/api/auth/reset-password').send({ token: 'token-original', senha: '123456' });
+
+    expect(res.status).toBe(200);
+    expect(updateSpy.mock.calls[0][0].data.tokenVersion).toEqual({ increment: 1 });
+    expect(updateSpy.mock.calls[0][0].data.resetTokenHash).toBeNull();
+  });
+
+  it('rejeita token inexistente ou expirado (400)', async () => {
+    vi.spyOn(prisma.usuario, 'findUnique').mockResolvedValue(null);
+    const res = await request(app).post('/api/auth/reset-password').send({ token: 'invalido', senha: '123456' });
+    expect(res.status).toBe(400);
   });
 });

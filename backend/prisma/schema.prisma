@@ -13,8 +13,11 @@ model Usuario {
   email               String      @unique
   senha               String
   foto                String?
-  resetToken          String?     @unique
+  resetTokenHash      String?     @unique
   resetTokenExpiresAt DateTime?
+  // Incrementado sempre que a senha muda — tokens JWT emitidos antes disso
+  // carregam a versão antiga e são recusados por authMiddleware.
+  tokenVersion        Int         @default(0)
   createdAt           DateTime    @default(now())
   transacoes          Transacao[]
 }
