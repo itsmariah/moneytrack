@@ -8,6 +8,7 @@ import TransactionList from '../components/TransactionList'
 import ExpensePieChart from '../components/charts/ExpensePieChart'
 import OFXImportModal from '../components/OFXImportModal'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { SkeletonCards, SkeletonList, SkeletonChart } from '../components/Skeleton'
 
 import { TODAS_CATEGORIAS } from '../utils/categories'
 
@@ -197,7 +198,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        <SummaryCards balance={balance} />
+        {loading ? <SkeletonCards /> : <SummaryCards balance={balance} />}
 
         <div className="dashboard-grid">
           <div className="transactions-section">
@@ -242,13 +243,15 @@ export default function Dashboard() {
             </div>
 
             {loading ? (
-              <div className="loading">Carregando transações...</div>
-            ) : (
+              <SkeletonList rows={5} />
+            ) : error ? null : (
               <>
                 <TransactionList
                   transactions={transactions}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
+                  hasFilters={hasFilters}
+                  onCreateClick={() => setShowModal(true)}
                 />
                 {pagination.totalPages > 1 && (
                   <div className="pagination">
@@ -278,11 +281,11 @@ export default function Dashboard() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
             <div className="chart-section">
               <h3>Gastos por Categoria</h3>
-              <ExpensePieChart data={despesasByCategory} emptyMessage="Nenhuma despesa registrada" />
+              {loading ? <SkeletonChart /> : <ExpensePieChart data={despesasByCategory} emptyMessage="Nenhuma despesa registrada" />}
             </div>
             <div className="chart-section">
               <h3>Fontes de Renda</h3>
-              <ExpensePieChart data={receitasByCategory} emptyMessage="Nenhuma receita registrada" />
+              {loading ? <SkeletonChart /> : <ExpensePieChart data={receitasByCategory} emptyMessage="Nenhuma receita registrada" />}
             </div>
           </div>
         </div>

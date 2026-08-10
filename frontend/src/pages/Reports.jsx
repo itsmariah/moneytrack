@@ -11,6 +11,7 @@ import api from '../services/api'
 import { fmt, fmtDate } from '../utils/format'
 import { useTheme } from '../context/ThemeContext'
 import { getChartTheme } from '../utils/chartTheme'
+import { SkeletonCards, SkeletonList, SkeletonChart } from '../components/Skeleton'
 
 // new Date().toISOString() é UTC — perto da virada do mês no Brasil (UTC-3) isso pode
 // adiantar o mês padrão exibido. Aqui montamos o mês local manualmente para evitar isso.
@@ -164,7 +165,26 @@ export default function Reports() {
         </div>
 
         {loading ? (
-          <div className="loading">Carregando relatório...</div>
+          <>
+            <SkeletonCards />
+            <div className="chart-section" style={{ marginBottom: 24 }}>
+              <h3>Evolução dos Últimos 6 Meses</h3>
+              <SkeletonChart height={260} />
+            </div>
+            <div className="reports-charts">
+              <div className="chart-section">
+                <h3>Despesas por Categoria</h3>
+                <SkeletonChart />
+              </div>
+              <div className="chart-section">
+                <h3>Fontes de Renda</h3>
+                <SkeletonChart />
+              </div>
+            </div>
+            <div className="transactions-section">
+              <SkeletonList rows={5} />
+            </div>
+          </>
         ) : error ? (
           <div className="alert alert-error alert-with-action">
             <span>{error}</span>

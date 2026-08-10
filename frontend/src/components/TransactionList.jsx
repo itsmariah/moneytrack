@@ -1,11 +1,26 @@
 import { fmt, fmtDate } from '../utils/format'
 
-export default function TransactionList({ transactions, onEdit, onDelete }) {
+export default function TransactionList({ transactions, onEdit, onDelete, hasFilters, onCreateClick }) {
   if (transactions.length === 0) {
+    if (hasFilters) {
+      return (
+        <div className="empty-state">
+          <div className="empty-state-icon">🔍</div>
+          <p>Nenhuma transação encontrada com esses filtros.</p>
+          <p className="empty-state-sub">Tente ajustar ou limpar os filtros.</p>
+        </div>
+      )
+    }
     return (
       <div className="empty-state">
-        <p>Nenhuma transação encontrada.</p>
-        <p style={{ fontSize: 13, marginTop: 6 }}>Adicione sua primeira receita ou despesa.</p>
+        <div className="empty-state-icon">💸</div>
+        <p>Você ainda não tem nenhuma transação.</p>
+        <p className="empty-state-sub">Adicione sua primeira receita ou despesa para começar a acompanhar seu saldo.</p>
+        {onCreateClick && (
+          <button type="button" className="btn btn-primary" onClick={onCreateClick} style={{ marginTop: 16 }}>
+            + Adicionar transação
+          </button>
+        )}
       </div>
     )
   }

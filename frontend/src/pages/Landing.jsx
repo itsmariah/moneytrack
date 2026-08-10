@@ -13,6 +13,7 @@ export default function Landing() {
   const navigate = useNavigate()
   const location = useLocation()
   const [showBackToTop, setShowBackToTop] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     if (user && !location.state?.fromApp) navigate('/dashboard')
@@ -24,19 +25,38 @@ export default function Landing() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  useEffect(() => {
+    if (!mobileMenuOpen) return
+    const onKeyDown = (e) => { if (e.key === 'Escape') setMobileMenuOpen(false) }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [mobileMenuOpen])
+
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' })
+  const closeMenu = () => setMobileMenuOpen(false)
 
   return (
     <div className="landing">
       <nav className="landing-nav">
         <div className="logo"><span className="logo-coin">💰</span> MoneyTrack</div>
-        <div className="nav-links">
-          <a href="#sobre" className="nav-link">Sobre</a>
-          <a href="#funcionalidades" className="nav-link">Funcionalidades</a>
-          {!isDesktopApp && <a href="#desktop" className="nav-link">Desktop</a>}
+
+        <button
+          type="button"
+          className="mobile-menu-btn"
+          onClick={() => setMobileMenuOpen(o => !o)}
+          aria-label={mobileMenuOpen ? 'Fechar menu' : 'Abrir menu'}
+          aria-expanded={mobileMenuOpen}
+        >
+          {mobileMenuOpen ? '✕' : '☰'}
+        </button>
+
+        <div className={`nav-links${mobileMenuOpen ? ' nav-links--open' : ''}`}>
+          <a href="#sobre" className="nav-link" onClick={closeMenu}>Sobre</a>
+          <a href="#funcionalidades" className="nav-link" onClick={closeMenu}>Funcionalidades</a>
+          {!isDesktopApp && <a href="#desktop" className="nav-link" onClick={closeMenu}>Desktop</a>}
           <ThemeToggle />
-          <Link to="/login" className="btn btn-outline btn-sm">Entrar</Link>
-          <Link to="/cadastro" className="btn btn-primary btn-sm">Criar conta</Link>
+          <Link to="/login" className="btn btn-outline btn-sm" onClick={closeMenu}>Entrar</Link>
+          <Link to="/cadastro" className="btn btn-primary btn-sm" onClick={closeMenu}>Criar conta</Link>
         </div>
       </nav>
 
