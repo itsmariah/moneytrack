@@ -359,7 +359,8 @@ input[type="month"]::-webkit-calendar-picker-indicator { filter: invert(0.8); }
 /* ── FILTERS ── */
 .filters { display: flex; flex-wrap: wrap; gap: 8px; }
 .filters select,
-.filters input[type="date"] {
+.filters input[type="date"],
+.filters input[type="search"] {
   background: var(--bg3);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -368,6 +369,7 @@ input[type="month"]::-webkit-calendar-picker-indicator { filter: invert(0.8); }
   font-size: 13px;
   cursor: pointer;
 }
+.filters input[type="search"] { cursor: text; min-width: 220px; flex: 1 1 220px; }
 .filters select:focus,
 .filters input:focus { outline: none; border-color: var(--primary); }
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import api from '../services/api'
 import Navbar from '../components/Navbar'
@@ -18,7 +18,8 @@ export default function Dashboard() {
   const [transactions, setTransactions] = useState([])
   const [balance, setBalance] = useState({ receitas: 0, despesas: 0, saldo: 0 })
   const [categoryData, setCategoryData] = useState([])
-  const [filters, setFilters] = useState({ tipo: '', categoria: '', data_inicio: '', data_fim: '' })
+  const [filters, setFilters] = useState({ tipo: '', categoria: '', data_inicio: '', data_fim: '', busca: '' })
+  const [buscaInput, setBuscaInput] = useState('')
   const [page, setPage] = useState(1)
   const [pagination, setPagination] = useState({ total: 0, totalPages: 1 })
   const [showModal, setShowModal] = useState(false)
@@ -43,6 +44,7 @@ export default function Dashboard() {
       if (filters.categoria) params.categoria = filters.categoria
       if (filters.data_inicio) params.data_inicio = filters.data_inicio
       if (filters.data_fim) params.data_fim = filters.data_fim
+      if (filters.busca) params.busca = filters.busca
 
       const [txRes, balanceRes, catRes] = await Promise.all([
         api.get('/transactions', { params }),
@@ -108,9 +110,23 @@ export default function Dashboard() {
     setPage(1)
   }
 
-  const hasFilters = filters.tipo || filters.categoria || filters.data_inicio || filters.data_fim
+  // Busca por texto (descrição/categoria) é aplicada com debounce, pra não disparar
+  // uma requisição a cada tecla digitada.
+  const isFirstRender = useRef(true)
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false
+      return
+    }
+    const timer = setTimeout(() => updateFilters({ busca: buscaInput }), 400)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [buscaInput])
+
+  const hasFilters = filters.tipo || filters.categoria || filters.data_inicio || filters.data_fim || filters.busca
   const clearFilters = () => {
-    setFilters({ tipo: '', categoria: '', data_inicio: '', data_fim: '' })
+    setFilters({ tipo: '', categoria: '', data_inicio: '', data_fim: '', busca: '' })
+    setBuscaInput('')
     setPage(1)
   }
 
@@ -152,6 +168,14 @@ export default function Dashboard() {
             <div className="section-header">
               <h3>Transações</h3>
               <div className="filters">
+                <input
+                  type="search"
+                  className="filter-search"
+                  value={buscaInput}
+                  onChange={e => setBuscaInput(e.target.value)}
+                  placeholder="Buscar por descrição ou categoria..."
+                  aria-label="Buscar transações"
+                />
                 <select value={filters.tipo} onChange={e => updateFilters({ tipo: e.target.value })}>
                   <option value="">Todos os tipos</option>
                   <option value="receita">Receitas</option>

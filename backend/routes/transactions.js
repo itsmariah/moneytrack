@@ -5,6 +5,7 @@ const authMiddleware = require('../middleware/auth');
 const { validateTransactionInput } = require('../utils/validateTransaction');
 const { parsePagination, buildPaginationMeta } = require('../utils/pagination');
 const { serializeTransaction, serializeTransactions } = require('../utils/serializeTransaction');
+const { buildTransactionWhere } = require('../utils/buildTransactionWhere');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -35,17 +36,9 @@ const bulkImportLimiter = rateLimit({
 // RF08 - Listar transações (com filtros RF10 e RF11), paginada
 router.get('/', async (req, res) => {
   try {
-    const { tipo, categoria, data_inicio, data_fim, page, limit } = req.query;
+    const { tipo, categoria, data_inicio, data_fim, busca, page, limit } = req.query;
 
-    const where = { usuarioId: req.userId };
-    if (tipo) where.tipo = tipo;
-    if (categoria) where.categoria = categoria;
-    if (data_inicio || data_fim) {
-      where.data = {};
-      if (data_inicio) where.data.gte = data_inicio;
-      if (data_fim) where.data.lte = data_fim;
-    }
-
+    const where = buildTransactionWhere(req.userId, { tipo, categoria, data_inicio, data_fim, busca });
     const { page: pageNum, limit: pageSize, skip } = parsePagination(page, limit);
 
     const [rawTransactions, total] = await Promise.all([
