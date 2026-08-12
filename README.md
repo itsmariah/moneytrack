@@ -21,10 +21,12 @@ O **MoneyTrack** é uma aplicação de gestão financeira pessoal que permite ao
 ## ✨ Funcionalidades
 
 - Cadastro e login de usuários (senha criptografada)
-- Recuperação de senha por e-mail ("Esqueceu a senha?")
+- Recuperação de senha por e-mail ("Esqueceu a senha?"), com invalidação automática de sessões antigas ao trocar a senha
 - Adicionar, editar e excluir transações
 - Saldo calculado automaticamente
-- Filtros por tipo, categoria e período de data
+- Filtros por tipo, categoria, período de data e **busca por texto** (descrição ou categoria)
+- Listagem de transações **paginada**
+- **Exportação das transações em CSV** (respeitando os filtros ativos)
 - **Importação de extratos bancários em formato OFX** com preview e edição de categorias antes de confirmar
 - Categorias separadas por tipo (receitas e despesas) com auto-categorização no OFX
 - Gráfico de **despesas** por categoria (rosca)
@@ -32,7 +34,9 @@ O **MoneyTrack** é uma aplicação de gestão financeira pessoal que permite ao
 - Relatório mensal com filtros de tipo e categoria
 - Gráfico de evolução mensal (últimos 6 meses)
 - Edição de perfil (nome, e-mail, senha, foto de perfil)
-- Interface responsiva (funciona no celular)
+- **Modo claro/escuro**, com preferência salva no navegador
+- Interface responsiva (menu mobile com hambúrguer na landing page)
+- Navegação completa por teclado (modais com trava de foco, `aria-live` para leitores de tela)
 - **Aplicação desktop** empacotável via Electron
 
 ---
@@ -62,6 +66,7 @@ O **MoneyTrack** é uma aplicação de gestão financeira pessoal que permite ao
 | Banco de dados | PostgreSQL (via Prisma ORM) |
 | Autenticação | JWT (JSON Web Token) |
 | Criptografia | bcryptjs |
+| Testes | Vitest (unitários e integração) + Supertest (rotas HTTP) |
 | Desktop | Electron 31 + electron-builder |
 
 ---
@@ -82,13 +87,21 @@ moneytrack/
 │   ├── database/
 │   │   └── db.js                       ← Conexão com o banco (Prisma Client)
 │   ├── middleware/
-│   │   └── auth.js                     ← Verificação do token JWT
+│   │   └── auth.js                     ← Verificação do token JWT (confere tokenVersion)
 │   ├── routes/
 │   │   ├── auth.js                     ← Cadastro, login, recuperação de senha, editar perfil
-│   │   ├── transactions.js             ← CRUD de transações + importação bulk
+│   │   ├── transactions.js             ← CRUD de transações + busca + paginação + export CSV + bulk
 │   │   └── reports.js                  ← Saldo, relatórios, gráficos
-│   ├── utils/
-│   │   └── mailer.js                   ← Envio de e-mail (redefinição de senha) via nodemailer
+│   ├── utils/                          ← Lógica pura, testável sem banco
+│   │   ├── mailer.js                   ← Envio de e-mail (redefinição de senha) via nodemailer
+│   │   ├── validateTransaction.js      ← Validação de tipo/valor/categoria/data
+│   │   ├── reportCalculations.js       ← Cálculo de saldo, resumo mensal e evolução
+│   │   ├── pagination.js               ← Normalização de page/limit
+│   │   ├── serializeTransaction.js     ← Converte Prisma.Decimal em number nas respostas
+│   │   ├── buildTransactionWhere.js    ← Monta o filtro (tipo/categoria/período/busca)
+│   │   ├── csvExport.js                ← Gera o CSV de exportação
+│   │   └── resetToken.js               ← Hash (sha256) do token de redefinição de senha
+│   ├── tests/                          ← Testes de integração das rotas (Vitest + Supertest)
 │   ├── server.js                       ← Ponto de entrada da API
 │   ├── .env                            ← Variáveis de ambiente (não vai pro git)
 │   ├── .env.example                    ← Modelo de variáveis de ambiente (inclui SMTP)
@@ -110,23 +123,32 @@ moneytrack/
     │   │   ├── Navbar.jsx              ← Barra de navegação
     │   │   ├── SummaryCards.jsx        ← Cards de saldo/receitas/despesas
     │   │   ├── TransactionModal.jsx    ← Modal de adicionar/editar transação
-    │   │   ├── TransactionList.jsx     ← Lista de transações
+    │   │   ├── TransactionList.jsx     ← Lista de transações (com empty states)
     │   │   ├── OFXImportModal.jsx      ← Modal de importação de extrato OFX
     │   │   ├── ProfileModal.jsx        ← Modal de editar perfil
     │   │   ├── PrivateRoute.jsx        ← Proteção de rotas autenticadas
+    │   │   ├── Modal.jsx               ← Base dos modais (trava de foco, fecha com Esc)
+    │   │   ├── ConfirmDialog.jsx       ← Confirmação de ações destrutivas
+    │   │   ├── Alert.jsx               ← Alertas com role="alert"/"status" (leitor de tela)
+    │   │   ├── Skeleton.jsx            ← Placeholders de carregamento
+    │   │   ├── ThemeToggle.jsx         ← Alternância modo claro/escuro
+    │   │   ├── PasswordMatchHint.jsx   ← Feedback ao vivo de confirmação de senha
     │   │   └── charts/
     │   │       └── ExpensePieChart.jsx ← Gráfico de pizza (despesas e receitas)
     │   ├── context/
-    │   │   └── AuthContext.jsx         ← Estado global de autenticação
+    │   │   ├── AuthContext.jsx         ← Estado global de autenticação
+    │   │   └── ThemeContext.jsx        ← Estado global de tema (persistido no navegador)
     │   ├── services/
     │   │   └── api.js                  ← Configuração do Axios (suporta file://)
     │   ├── utils/
     │   │   ├── categories.js           ← Categorias por tipo (fonte única)
     │   │   ├── ofxParser.js            ← Parser de arquivos OFX (SGML e XML)
-    │   │   └── resizeImage.js          ← Redimensiona a foto de perfil no navegador antes do upload
+    │   │   ├── resizeImage.js          ← Redimensiona a foto de perfil no navegador antes do upload
+    │   │   ├── format.js               ← Formatação de moeda (BRL) e data
+    │   │   └── chartTheme.js           ← Cores dos gráficos por tema (claro/escuro)
     │   ├── App.jsx                     ← Rotas da aplicação
     │   ├── main.jsx                    ← Ponto de entrada React
-    │   └── index.css                   ← Estilos globais (tema escuro)
+    │   └── index.css                   ← Estilos globais (temas claro e escuro via CSS custom properties)
     ├── index.html                      ← HTML base (Vite)
     ├── vite.config.js                  ← Configuração do Vite (base: '/' no web, './' no Electron)
     ├── vercel.json                     ← Rewrite de SPA para deploy na Vercel
@@ -228,18 +250,26 @@ Base URL: `http://localhost:3001/api`
 
 | Método | Rota | Descrição | Auth |
 |--------|------|-----------|------|
-| GET | `/transactions` | Listar transações (com filtros) | Sim |
+| GET | `/transactions` | Listar transações, paginado (com filtros) | Sim |
+| GET | `/transactions/export` | Exportar transações em CSV (respeita os filtros) | Sim |
 | POST | `/transactions` | Criar transação | Sim |
-| POST | `/transactions/bulk` | Importar lote de transações (OFX) | Sim |
+| POST | `/transactions/bulk` | Importar lote de transações (OFX, máx. 500 por vez) | Sim |
 | PUT | `/transactions/:id` | Editar transação | Sim |
 | DELETE | `/transactions/:id` | Excluir transação | Sim |
 
-**Filtros disponíveis no GET `/transactions`:**
+**Filtros disponíveis no GET `/transactions` (e no `/export`):**
 ```
 ?tipo=receita           → filtra por tipo
 ?categoria=Alimentação  → filtra por categoria
 ?data_inicio=2026-05-01 → filtra por data inicial
 ?data_fim=2026-05-31    → filtra por data final
+?busca=mercado          → busca por texto na descrição ou categoria
+?page=1&limit=50        → paginação (padrão: 50 por página, máx. 200)
+```
+
+**Resposta do GET `/transactions`:**
+```json
+{ "transactions": [ /* ... */ ], "page": 1, "limit": 50, "total": 12, "totalPages": 1 }
 ```
 
 ### Relatórios
@@ -319,6 +349,23 @@ O banco é **PostgreSQL**, acessado via Prisma ORM a partir da string de conexã
 - Cabeçalhos de segurança via `helmet`
 - Todas as rotas de transações e relatórios exigem token válido
 - Cada usuário só acessa suas próprias transações
+
+---
+
+## 🧪 Testes
+
+Backend e frontend têm suítes de testes automatizados com **[Vitest](https://vitest.dev)**.
+
+```bash
+# Backend — 100+ testes: cálculos financeiros, validação, paginação, hash de token,
+# serialização de Decimal, e testes de integração das rotas (auth, transações, relatórios) via Supertest
+cd backend && npm test
+
+# Frontend — parser de OFX (receita/despesa, encoding, arquivos malformados) e formatação (moeda, data)
+cd frontend && npm test
+```
+
+Os testes de integração do backend mockam o Prisma Client (sem precisar de um Postgres real pra rodar) e cobrem, entre outras coisas, que cada rota escopa os dados pelo usuário do token — nunca pelo que vem no corpo ou na query string da requisição.
 
 ---
 
@@ -454,5 +501,4 @@ Relatórios (/relatorios)
 - O arquivo `.env` **não vai para o Git** (está no `.gitignore`). Cada desenvolvedor cria o seu a partir de `backend/.env.example`.
 - `JWT_SECRET` é **obrigatório** — o servidor (`node server.js`) encerra imediatamente se essa variável não estiver definida.
 - Para a recuperação de senha funcionar, configure as variáveis `SMTP_*` no `.env` do backend com credenciais de um provedor de e-mail (ex: Gmail App Password). Sem isso, o envio do e-mail falha.
-- O banco `dev.db` também **não vai para o Git**. É criado localmente com `prisma migrate dev`.
 - Os dois servidores precisam estar rodando ao mesmo tempo para o sistema funcionar (exceto no modo Electron, que gerencia isso automaticamente).
