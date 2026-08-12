@@ -75,11 +75,18 @@ export default function Landing() {
           <p>O MoneyTrack é uma aplicação de gestão financeira pessoal criada para ajudar você a entender para onde vai o seu dinheiro. Cadastre receitas e despesas, importe extratos bancários em formato OFX e acompanhe o saldo atualizado automaticamente, com gráficos que mostram a evolução dos seus gastos mês a mês.</p>
           <p>Disponível como aplicação web, acessível de qualquer navegador, ou como app desktop instalável — sem precisar manter abas abertas no navegador.</p>
         </div>
-        <img
-          src={screenshotDashboard}
-          alt="Painel do MoneyTrack mostrando saldo, receitas e despesas"
-          className="about-image"
-        />
+        <div className="browser-frame">
+          <div className="browser-frame-bar">
+            <span className="browser-dot browser-dot--red" />
+            <span className="browser-dot browser-dot--yellow" />
+            <span className="browser-dot browser-dot--green" />
+          </div>
+          <img
+            src={screenshotDashboard}
+            alt="Painel do MoneyTrack mostrando saldo, receitas e despesas"
+            className="about-image"
+          />
+        </div>
       </section>
 
       <section id="funcionalidades" className="features-section">
@@ -130,11 +137,18 @@ export default function Landing() {
 
       {!isDesktopApp && (
         <section id="desktop" className="download-section">
-          <img
-            src={screenshotRelatorio}
-            alt="Relatórios do MoneyTrack com gráficos de evolução mensal"
-            className="download-image"
-          />
+          <div className="browser-frame">
+            <div className="browser-frame-bar">
+              <span className="browser-dot browser-dot--red" />
+              <span className="browser-dot browser-dot--yellow" />
+              <span className="browser-dot browser-dot--green" />
+            </div>
+            <img
+              src={screenshotRelatorio}
+              alt="Relatórios do MoneyTrack com gráficos de evolução mensal"
+              className="download-image"
+            />
+          </div>
           <div className="download-card">
             <h2>Leve o MoneyTrack para o seu desktop</h2>
             <p>Baixe o instalador para Windows, macOS ou Linux e use o MoneyTrack como um aplicativo nativo, com os mesmos dados e funcionalidades da versão web.</p>
