@@ -399,6 +399,24 @@ input[type="month"]::-webkit-calendar-picker-indicator { filter: var(--picker-in
   perspective: 300px;
 }
 .navbar-brand:hover { color: var(--text); }
+.navbar-brand-text {
+  background: linear-gradient(90deg, var(--text), var(--primary-light), #a78bfa, var(--primary-light), var(--text));
+  background-size: 300% 100%;
+  background-position: 0% 50%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  transition: background-position 0.6s ease, filter 0.6s ease;
+  filter: drop-shadow(0 0 0 transparent);
+}
+.navbar-brand:hover .navbar-brand-text,
+.logo:hover .navbar-brand-text {
+  background-position: 100% 50%;
+  filter: drop-shadow(0 0 6px rgba(129, 140, 248, 0.6));
+}
+@media (prefers-reduced-motion: reduce) {
+  .navbar-brand-text { transition: none; }
+}
 .navbar-nav { display: flex; gap: 4px; }
 .navbar-nav a { padding: 6px 14px; border-radius: 8px; font-size: 14px; color: var(--text-muted); font-weight: 500; transition: all 0.2s; }
 .navbar-nav a:hover, .navbar-nav a.active { background: var(--bg3); color: var(--text); }

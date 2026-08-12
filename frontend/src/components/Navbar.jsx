@@ -14,7 +14,7 @@ export default function Navbar() {
   return (
     <header className="navbar">
       <Link to="/" state={{ fromApp: true }} className="navbar-brand">
-        <span className="logo-coin">💰</span> MoneyTrack
+        <span className="logo-coin">💰</span> <span className="navbar-brand-text">MoneyTrack</span>
       </Link>
 
       <nav className="navbar-nav">

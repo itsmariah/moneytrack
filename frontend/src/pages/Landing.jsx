@@ -38,7 +38,7 @@ export default function Landing() {
   return (
     <div className="landing">
       <nav className="landing-nav">
-        <div className="logo"><span className="logo-coin">💰</span> MoneyTrack</div>
+        <div className="logo"><span className="logo-coin">💰</span> <span className="navbar-brand-text">MoneyTrack</span></div>
 
         <button
           type="button"
