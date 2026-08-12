@@ -156,7 +156,7 @@ export default function Landing() {
       )}
 
       <footer className="landing-footer">
-        <p>💰 MoneyTrack — Projeto acadêmico · Programação de Computadores 2026.1</p>
+        <p>💰 MoneyTrack</p>
         <a href="https://github.com/itsmariah/moneytrack" target="_blank" rel="noopener noreferrer">Ver no GitHub</a>
       </footer>
 

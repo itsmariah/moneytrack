@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { resizeImage } from '../utils/resizeImage'
 import Modal from './Modal'
 
 export default function ProfileModal({ onClose }) {
   const { user, updateProfile } = useAuth()
+  const fotoInputRef = useRef(null)
   const [form, setForm] = useState({ nome: user?.nome || '', email: user?.email || '', senha: '', confirmar: '' })
   const [foto, setFoto] = useState(user?.foto ?? null)
   const [fotoChanged, setFotoChanged] = useState(false)
@@ -91,10 +92,20 @@ export default function ProfileModal({ onClose }) {
               </div>
             )}
             <div className="profile-photo-actions">
-              <label className="btn btn-outline btn-sm">
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => fotoInputRef.current?.click()}
+              >
                 Escolher foto
-                <input type="file" accept="image/*" onChange={handleFotoChange} hidden />
-              </label>
+              </button>
+              <input
+                ref={fotoInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFotoChange}
+                hidden
+              />
               {foto && (
                 <button type="button" className="btn btn-outline btn-sm" onClick={handleRemoveFoto}>
                   Remover

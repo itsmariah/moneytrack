@@ -22,6 +22,7 @@
   --alert-error-fg: #fca5a5;
   --alert-success-fg: #86efac;
   --skeleton-shine: #454b7a;
+  --focus-ring: 0 0 0 3px rgba(99,102,241,0.35);
 }
 
 /* ── TEMA CLARO ── */
@@ -56,6 +57,16 @@ body {
 
 a { color: var(--primary-light); text-decoration: none; }
 a:hover { color: var(--primary); }
+
+/* ── FOCO (teclado) ── */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
 
 /* ── BUTTONS ── */
 .btn {
@@ -100,7 +111,7 @@ a:hover { color: var(--primary); }
   width: 100%;
 }
 .form-group input:focus,
-.form-group select:focus { outline: none; border-color: var(--primary); }
+.form-group select:focus { outline: none; border-color: var(--primary); box-shadow: var(--focus-ring); }
 .form-group select option { background: var(--bg2); }
 input[type="date"]::-webkit-calendar-picker-indicator { filter: var(--picker-invert); }
 input[type="month"]::-webkit-calendar-picker-indicator { filter: var(--picker-invert); }
@@ -446,7 +457,7 @@ input[type="month"]::-webkit-calendar-picker-indicator { filter: var(--picker-in
 }
 .filters input[type="search"] { cursor: text; min-width: 220px; flex: 1 1 220px; }
 .filters select:focus,
-.filters input:focus { outline: none; border-color: var(--primary); }
+.filters input:focus { outline: none; border-color: var(--primary); box-shadow: var(--focus-ring); }
 
 /* ── TRANSACTION LIST ── */
 .transaction-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
@@ -508,6 +519,7 @@ input[type="month"]::-webkit-calendar-picker-indicator { filter: var(--picker-in
 /* ── TYPE TOGGLE ── */
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
 .type-btn {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -521,8 +533,11 @@ input[type="month"]::-webkit-calendar-picker-indicator { filter: var(--picker-in
   transition: all 0.2s;
   background: var(--bg3);
 }
-.type-btn input { display: none; }
+/* Escondido visualmente mas continua na ordem de tabulação (display:none tiraria o
+   rádio do foco por teclado — era possível clicar, mas não navegar até ele via Tab). */
+.type-btn input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .type-btn:hover { border-color: var(--primary); }
+.type-btn:focus-within { outline: 2px solid var(--primary); outline-offset: 2px; }
 .type-btn.active-income { border-color: var(--green); background: rgba(34,197,94,0.1); color: var(--green); }
 .type-btn.active-expense { border-color: var(--red); background: rgba(239,68,68,0.1); color: var(--red); }
 
@@ -571,7 +586,7 @@ input[type="month"]::-webkit-calendar-picker-indicator { filter: var(--picker-in
   cursor: pointer;
   min-width: 190px;
 }
-.filter-select:focus { outline: none; border-color: var(--primary); }
+.filter-select:focus { outline: none; border-color: var(--primary); box-shadow: var(--focus-ring); }
 .filter-select:disabled { opacity: 0.45; cursor: not-allowed; }
 .filter-select option { background: var(--bg2); }
 
@@ -667,7 +682,7 @@ input[type="month"]::-webkit-calendar-picker-indicator { filter: var(--picker-in
   cursor: pointer;
   width: 100%;
 }
-.ofx-cat-select:focus { outline: none; border-color: var(--primary); }
+.ofx-cat-select:focus { outline: none; border-color: var(--primary); box-shadow: var(--focus-ring); }
 .ofx-cat-select option { background: var(--bg2); }
 .ofx-cat-custom {
   background: var(--bg3);
@@ -679,7 +694,7 @@ input[type="month"]::-webkit-calendar-picker-indicator { filter: var(--picker-in
   width: 100%;
   margin-top: 4px;
 }
-.ofx-cat-custom:focus { outline: none; border-color: var(--primary); }
+.ofx-cat-custom:focus { outline: none; border-color: var(--primary); box-shadow: var(--focus-ring); }
 
 .ofx-summary {
   display: flex;
