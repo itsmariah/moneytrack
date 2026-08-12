@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import Alert from '../components/Alert'
+import PasswordMatchHint from '../components/PasswordMatchHint'
 
 export default function Register() {
   const [form, setForm] = useState({ nome: '', email: '', senha: '', confirmar: '' })
@@ -83,8 +84,10 @@ export default function Register() {
               value={form.confirmar}
               onChange={e => setForm({ ...form, confirmar: e.target.value })}
               placeholder="Repita a senha"
+              aria-describedby={form.confirmar ? 'register-confirmar-hint' : undefined}
               required
             />
+            <PasswordMatchHint id="register-confirmar-hint" senha={form.senha} confirmar={form.confirmar} />
           </div>
           <button type="submit" className="btn btn-primary btn-full" disabled={loading}>
             {loading ? 'Criando conta...' : 'Criar conta'}

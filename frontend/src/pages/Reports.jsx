@@ -259,9 +259,27 @@ export default function Reports() {
 
               {filtered.length === 0 ? (
                 <div className="empty-state">
-                  {isFiltered
-                    ? 'Nenhuma transação com os filtros selecionados.'
-                    : 'Nenhuma transação neste mês.'}
+                  <div className="empty-state-icon">{isFiltered ? '🔍' : '📭'}</div>
+                  <p>
+                    {isFiltered
+                      ? 'Nenhuma transação com os filtros selecionados.'
+                      : 'Nenhuma transação neste mês.'}
+                  </p>
+                  <p className="empty-state-sub">
+                    {isFiltered
+                      ? 'Tente ajustar ou limpar os filtros.'
+                      : 'Selecione outro mês ou adicione transações no Dashboard.'}
+                  </p>
+                  {isFiltered && (
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-sm"
+                      style={{ marginTop: 16 }}
+                      onClick={() => { setTipoFilter('todos'); setCategoriaFilter('todas') }}
+                    >
+                      Limpar filtros
+                    </button>
+                  )}
                 </div>
               ) : (
                 <ul className="transaction-list">

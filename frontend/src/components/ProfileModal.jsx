@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { resizeImage } from '../utils/resizeImage'
 import Modal from './Modal'
 import Alert from './Alert'
+import PasswordMatchHint from './PasswordMatchHint'
 
 export default function ProfileModal({ onClose }) {
   const { user, updateProfile } = useAuth()
@@ -153,8 +154,10 @@ export default function ProfileModal({ onClose }) {
                 type="password"
                 value={form.confirmar}
                 onChange={e => setForm({ ...form, confirmar: e.target.value })}
+                aria-describedby={form.confirmar ? 'profile-confirmar-hint' : undefined}
                 required
               />
+              <PasswordMatchHint id="profile-confirmar-hint" senha={form.senha} confirmar={form.confirmar} />
             </div>
           )}
           <div className="modal-footer">

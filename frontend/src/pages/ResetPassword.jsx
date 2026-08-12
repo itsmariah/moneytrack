@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../services/api'
 import Alert from '../components/Alert'
+import PasswordMatchHint from '../components/PasswordMatchHint'
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams()
@@ -67,8 +68,10 @@ export default function ResetPassword() {
                   value={form.confirmar}
                   onChange={e => setForm({ ...form, confirmar: e.target.value })}
                   placeholder="Repita a senha"
+                  aria-describedby={form.confirmar ? 'reset-confirmar-hint' : undefined}
                   required
                 />
+                <PasswordMatchHint id="reset-confirmar-hint" senha={form.senha} confirmar={form.confirmar} />
               </div>
               <button type="submit" className="btn btn-primary btn-full" disabled={loading}>
                 {loading ? 'Salvando...' : 'Redefinir senha'}
