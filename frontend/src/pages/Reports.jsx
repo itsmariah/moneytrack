@@ -12,6 +12,7 @@ import { fmt, fmtDate } from '../utils/format'
 import { useTheme } from '../context/ThemeContext'
 import { getChartTheme } from '../utils/chartTheme'
 import { SkeletonCards, SkeletonList, SkeletonChart } from '../components/Skeleton'
+import Alert from '../components/Alert'
 
 // new Date().toISOString() é UTC — perto da virada do mês no Brasil (UTC-3) isso pode
 // adiantar o mês padrão exibido. Aqui montamos o mês local manualmente para evitar isso.
@@ -186,10 +187,10 @@ export default function Reports() {
             </div>
           </>
         ) : error ? (
-          <div className="alert alert-error alert-with-action">
+          <Alert type="error" className="alert-with-action">
             <span>{error}</span>
             <button className="btn btn-sm btn-outline" onClick={fetchReport}>Tentar novamente</button>
-          </div>
+          </Alert>
         ) : report ? (
           <>
             <SummaryCards balance={summary} />

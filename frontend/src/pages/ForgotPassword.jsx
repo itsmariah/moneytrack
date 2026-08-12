@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../services/api'
+import Alert from '../components/Alert'
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('')
@@ -30,8 +31,8 @@ export default function ForgotPassword() {
         <h1>💰 MoneyTrack</h1>
         <h2>Esqueceu a senha?</h2>
 
-        {error && <div className="alert alert-error">{error}</div>}
-        {message && <div className="alert alert-success">{message}</div>}
+        {error && <Alert type="error">{error}</Alert>}
+        {message && <Alert type="success">{message}</Alert>}
 
         {!message && (
           <form onSubmit={handleSubmit}>

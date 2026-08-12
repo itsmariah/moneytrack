@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../services/api'
+import Alert from '../components/Alert'
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams()
@@ -37,14 +38,14 @@ export default function ResetPassword() {
 
         {!token ? (
           <>
-            <div className="alert alert-error">Link de redefinição inválido.</div>
+            <Alert type="error">Link de redefinição inválido.</Alert>
             <p className="auth-link">
               <Link to="/esqueci-senha">Solicitar um novo link</Link>
             </p>
           </>
         ) : (
           <>
-            {error && <div className="alert alert-error">{error}</div>}
+            {error && <Alert type="error">{error}</Alert>}
             <form onSubmit={handleSubmit}>
               <div className="form-group">
                 <label htmlFor="reset-senha">Nova senha</label>

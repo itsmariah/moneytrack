@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import Alert from '../components/Alert'
 
 export default function Login() {
   const [form, setForm] = useState({ email: '', senha: '' })
@@ -36,9 +37,9 @@ export default function Login() {
         <h2>Entrar na sua conta</h2>
 
         {location.state?.resetSuccess && (
-          <div className="alert alert-success">Senha redefinida com sucesso. Faça login com a nova senha.</div>
+          <Alert type="success">Senha redefinida com sucesso. Faça login com a nova senha.</Alert>
         )}
-        {error && <div className="alert alert-error">{error}</div>}
+        {error && <Alert type="error">{error}</Alert>}
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">

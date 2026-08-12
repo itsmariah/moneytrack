@@ -5,6 +5,7 @@ import { TODAS_CATEGORIAS } from '../utils/categories'
 import { fmt } from '../utils/format'
 import api from '../services/api'
 import Modal from './Modal'
+import Alert from './Alert'
 
 export default function OFXImportModal({ onClose, onImported }) {
   const navigate = useNavigate()
@@ -88,7 +89,7 @@ export default function OFXImportModal({ onClose, onImported }) {
         <button className="modal-close" onClick={onClose}>✕</button>
       </div>
 
-        {error && <div className="alert alert-error">{error}</div>}
+        {error && <Alert type="error">{error}</Alert>}
 
         {/* ── STEP 1: upload ── */}
         {step === 'upload' && (

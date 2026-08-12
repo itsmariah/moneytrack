@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import Alert from '../components/Alert'
 
 export default function Register() {
   const [form, setForm] = useState({ nome: '', email: '', senha: '', confirmar: '' })
@@ -37,7 +38,7 @@ export default function Register() {
         <h1>💰 MoneyTrack</h1>
         <h2>Criar conta grátis</h2>
 
-        {error && <div className="alert alert-error">{error}</div>}
+        {error && <Alert type="error">{error}</Alert>}
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">

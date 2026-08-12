@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import api from '../services/api'
 import { categoriasPorTipo } from '../utils/categories'
 import Modal from './Modal'
+import Alert from './Alert'
 
 // new Date().toISOString() é UTC — perto da meia-noite no Brasil (UTC-3) isso adianta
 // a data em um dia. Aqui montamos a data local manualmente para evitar esse desvio.
@@ -79,7 +80,7 @@ export default function TransactionModal({ transaction, onClose, onSaved }) {
         <button className="modal-close" onClick={onClose}>✕</button>
       </div>
 
-        {error && <div className="alert alert-error">{error}</div>}
+        {error && <Alert type="error">{error}</Alert>}
 
         <form onSubmit={handleSubmit}>
           <div className="form-row">

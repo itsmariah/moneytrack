@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { resizeImage } from '../utils/resizeImage'
 import Modal from './Modal'
+import Alert from './Alert'
 
 export default function ProfileModal({ onClose }) {
   const { user, updateProfile } = useAuth()
@@ -79,8 +80,8 @@ export default function ProfileModal({ onClose }) {
         <button className="modal-close" onClick={onClose}>✕</button>
       </div>
 
-        {error && <div className="alert alert-error">{error}</div>}
-        {success && <div className="alert alert-success">{success}</div>}
+        {error && <Alert type="error">{error}</Alert>}
+        {success && <Alert type="success">{success}</Alert>}
 
         <form onSubmit={handleSubmit}>
           <div className="profile-photo-field">

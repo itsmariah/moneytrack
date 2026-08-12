@@ -8,6 +8,7 @@ import TransactionList from '../components/TransactionList'
 import ExpensePieChart from '../components/charts/ExpensePieChart'
 import OFXImportModal from '../components/OFXImportModal'
 import ConfirmDialog from '../components/ConfirmDialog'
+import Alert from '../components/Alert'
 import { SkeletonCards, SkeletonList, SkeletonChart } from '../components/Skeleton'
 
 import { TODAS_CATEGORIAS } from '../utils/categories'
@@ -192,10 +193,10 @@ export default function Dashboard() {
         </div>
 
         {error && (
-          <div className="alert alert-error alert-with-action">
+          <Alert type="error" className="alert-with-action">
             <span>{error}</span>
             <button className="btn btn-sm btn-outline" onClick={fetchData}>Tentar novamente</button>
-          </div>
+          </Alert>
         )}
 
         {loading ? <SkeletonCards /> : <SummaryCards balance={balance} />}
@@ -316,7 +317,7 @@ export default function Dashboard() {
         />
       )}
 
-      {toast && <div className="toast">{toast}</div>}
+      {toast && <div className="toast" role="status">{toast}</div>}
     </div>
   )
 }
