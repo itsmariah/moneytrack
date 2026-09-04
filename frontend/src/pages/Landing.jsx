@@ -170,8 +170,16 @@ export default function Landing() {
       )}
 
       <footer className="landing-footer">
-        <p>💰 MoneyTrack</p>
-        <a href="https://github.com/itsmariah/moneytrack" target="_blank" rel="noopener noreferrer">Ver no GitHub</a>
+        <div className="footer-row">
+          <p>💰 MoneyTrack</p>
+          <a href="https://github.com/itsmariah/moneytrack" target="_blank" rel="noopener noreferrer">Ver no GitHub</a>
+        </div>
+        <p className="footer-credits">
+          Feito por Mariah ·{' '}
+          <a href="https://github.com/itsmariah" target="_blank" rel="noopener noreferrer">GitHub</a> ·{' '}
+          <a href="https://www.linkedin.com/in/maria-mariah-queiroga-508757182/" target="_blank" rel="noopener noreferrer">LinkedIn</a> ·{' '}
+          <a href="https://itsmariah.github.io" target="_blank" rel="noopener noreferrer">Portfólio</a>
+        </p>
       </footer>
 
       {showBackToTop && (
