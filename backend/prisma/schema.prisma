@@ -23,6 +23,8 @@ model Usuario {
   metas               Meta[]
   orcamentos          Orcamento[]
   recorrencias        Recorrencia[]
+  contas              Conta[]
+  transferencias      Transferencia[]
 }
 
 model Transacao {
@@ -39,6 +41,42 @@ model Transacao {
   // SetNull (não Cascade): apagar a regra de recorrência não deve apagar o histórico
   // de transações já lançadas a partir dela.
   recorrencia   Recorrencia? @relation(fields: [recorrenciaId], references: [id], onDelete: SetNull)
+  contaId       Int
+  conta         Conta        @relation(fields: [contaId], references: [id], onDelete: Cascade)
+}
+
+// Conta/carteira do usuário (conta corrente, cartão, dinheiro em espécie...). saldoInicial
+// é o valor que a conta já tinha antes de começar a ser rastreada aqui — o saldo exibido
+// nunca é guardado, é sempre saldoInicial + receitas - despesas dessa conta (± transferências).
+model Conta {
+  id                     Int             @id @default(autoincrement())
+  usuarioId              Int
+  nome                   String
+  tipo                   String
+  saldoInicial           Decimal         @db.Decimal(12, 2) @default(0)
+  createdAt              DateTime        @default(now())
+  usuario                Usuario         @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  transacoes             Transacao[]
+  transferenciasSaida    Transferencia[] @relation("TransferenciasSaida")
+  transferenciasEntrada  Transferencia[] @relation("TransferenciasEntrada")
+  recorrencias           Recorrencia[]
+}
+
+// Movimentação entre duas contas do mesmo usuário — nunca gera Transacao (não é receita
+// nem despesa de verdade, só troca de "bolso"), então não aparece nos relatórios de
+// receita/despesa, só no saldo de cada conta envolvida.
+model Transferencia {
+  id             Int      @id @default(autoincrement())
+  usuarioId      Int
+  contaOrigemId  Int
+  contaDestinoId Int
+  valor          Decimal  @db.Decimal(12, 2)
+  data           String
+  descricao      String   @default("")
+  createdAt      DateTime @default(now())
+  usuario        Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  contaOrigem    Conta    @relation("TransferenciasSaida", fields: [contaOrigemId], references: [id], onDelete: Cascade)
+  contaDestino   Conta    @relation("TransferenciasEntrada", fields: [contaDestinoId], references: [id], onDelete: Cascade)
 }
 
 // Regra de recorrência mensal (aluguel, assinatura, salário...). As ocorrências não
@@ -59,6 +97,8 @@ model Recorrencia {
   createdAt   DateTime    @default(now())
   usuario     Usuario     @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   transacoes  Transacao[]
+  contaId     Int
+  conta       Conta       @relation(fields: [contaId], references: [id], onDelete: Cascade)
 }
 
 model Meta {

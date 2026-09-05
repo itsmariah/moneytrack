@@ -1,9 +1,11 @@
 // Soma receitas/despesas a partir do resultado de um groupBy por tipo (Prisma).
 // rows: [{ tipo: 'receita' | 'despesa', _sum: { valor: number } }]
-function calculateBalance(rows) {
+// saldoInicialTotal: soma do saldoInicial de todas as contas do usuário — dinheiro que
+// já existia antes de começar a ser rastreado, então entra no saldo mas não é receita/despesa.
+function calculateBalance(rows, saldoInicialTotal = 0) {
   const receitas = rows.find(r => r.tipo === 'receita')?._sum.valor || 0;
   const despesas = rows.find(r => r.tipo === 'despesa')?._sum.valor || 0;
-  return { receitas, despesas, saldo: receitas - despesas };
+  return { receitas, despesas, saldo: saldoInicialTotal + receitas - despesas };
 }
 
 // Soma receitas/despesas a partir de uma lista de transações já carregadas (ex: relatório mensal).

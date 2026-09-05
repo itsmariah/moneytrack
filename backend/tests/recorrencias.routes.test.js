@@ -23,12 +23,15 @@ const rawRecorrencia = (overrides = {}) => ({
   dataFim: null,
   ativa: true,
   createdAt: new Date(),
+  contaId: 1,
   ...overrides,
 });
 
 beforeEach(() => {
   // authMiddleware confere tokenVersion a cada requisição autenticada.
   vi.spyOn(prisma.usuario, 'findUnique').mockResolvedValue({ tokenVersion: 0 });
+  // contaPertenceAoUsuario: por padrão a conta 1 existe e é do usuário 7.
+  vi.spyOn(prisma.conta, 'findFirst').mockResolvedValue({ id: 1, usuarioId: 7 });
 });
 
 afterEach(() => {
@@ -71,7 +74,7 @@ describe('POST /api/recorrencias', () => {
     const res = await request(app)
       .post('/api/recorrencias')
       .set('Authorization', `Bearer ${token}`)
-      .send({ usuarioId: 999, tipo: 'despesa', valor: 1200, categoria: 'Moradia', diaDoMes: 5, dataInicio: '2026-08-01' });
+      .send({ usuarioId: 999, tipo: 'despesa', valor: 1200, categoria: 'Moradia', diaDoMes: 5, dataInicio: '2026-08-01', contaId: 1 });
 
     expect(res.status).toBe(201);
     expect(createSpy.mock.calls[0][0].data.usuarioId).toBe(7);
@@ -113,7 +116,7 @@ describe('PUT /api/recorrencias/:id', () => {
     const res = await request(app)
       .put('/api/recorrencias/1')
       .set('Authorization', `Bearer ${token}`)
-      .send({ tipo: 'despesa', valor: 1300, categoria: 'Moradia', diaDoMes: 5, dataInicio: '1999-01-01' });
+      .send({ tipo: 'despesa', valor: 1300, categoria: 'Moradia', diaDoMes: 5, dataInicio: '1999-01-01', contaId: 1 });
 
     expect(res.status).toBe(200);
     expect(res.body.valor).toBe(1300);
@@ -130,7 +133,7 @@ describe('PUT /api/recorrencias/:id', () => {
     const res = await request(app)
       .put('/api/recorrencias/1')
       .set('Authorization', `Bearer ${token}`)
-      .send({ tipo: 'despesa', valor: 1200, categoria: 'Moradia', diaDoMes: 5, ativa: false });
+      .send({ tipo: 'despesa', valor: 1200, categoria: 'Moradia', diaDoMes: 5, ativa: false, contaId: 1 });
 
     expect(res.status).toBe(200);
     expect(res.body.ativa).toBe(false);

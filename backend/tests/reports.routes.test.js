@@ -30,6 +30,7 @@ describe('GET /api/reports/balance', () => {
       { tipo: 'receita', _sum: { valor: new Prisma.Decimal('5000.00') } },
       { tipo: 'despesa', _sum: { valor: new Prisma.Decimal('3200.00') } },
     ]);
+    vi.spyOn(prisma.conta, 'findMany').mockResolvedValue([]);
 
     const res = await request(app).get('/api/reports/balance').set('Authorization', `Bearer ${token}`);
 
@@ -37,8 +38,24 @@ describe('GET /api/reports/balance', () => {
     expect(res.body).toEqual({ receitas: 5000, despesas: 3200, saldo: 1800 });
   });
 
+  it('soma o saldoInicial das contas do usuário ao saldo', async () => {
+    vi.spyOn(prisma.transacao, 'groupBy').mockResolvedValue([
+      { tipo: 'receita', _sum: { valor: new Prisma.Decimal('1000.00') } },
+    ]);
+    vi.spyOn(prisma.conta, 'findMany').mockResolvedValue([
+      { saldoInicial: new Prisma.Decimal('500.00') },
+      { saldoInicial: new Prisma.Decimal('200.00') },
+    ]);
+
+    const res = await request(app).get('/api/reports/balance').set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ receitas: 1000, despesas: 0, saldo: 1700 });
+  });
+
   it('escopa o groupBy pelo usuarioId do token', async () => {
     const spy = vi.spyOn(prisma.transacao, 'groupBy').mockResolvedValue([]);
+    vi.spyOn(prisma.conta, 'findMany').mockResolvedValue([]);
     await request(app).get('/api/reports/balance').set('Authorization', `Bearer ${token}`);
     expect(spy.mock.calls[0][0].where.usuarioId).toBe(7);
   });

@@ -7,10 +7,11 @@ import api from '../services/api'
 import Modal from './Modal'
 import Alert from './Alert'
 
-export default function OFXImportModal({ onClose, onImported }) {
+export default function OFXImportModal({ contas, onClose, onImported }) {
   const navigate = useNavigate()
   const [step, setStep]               = useState('upload') // upload | preview | done
   const [transactions, setTransactions] = useState([])
+  const [contaId, setContaId]         = useState(contas?.[0]?.id || '')
   const [error, setError]             = useState('')
   const [importing, setImporting]     = useState(false)
   const [importedCount, setImportedCount] = useState(0)
@@ -57,6 +58,7 @@ export default function OFXImportModal({ onClose, onImported }) {
     setError('')
     try {
       const { data } = await api.post('/transactions/bulk', {
+        contaId,
         transactions: toImport.map(t => ({
           tipo: t.tipo, valor: t.valor, categoria: resolveCategoria(t), descricao: t.descricao, data: t.data,
         })),
@@ -117,7 +119,11 @@ export default function OFXImportModal({ onClose, onImported }) {
           <>
             <div className="ofx-preview-header">
               <span className="ofx-preview-count">{transactions.length} transação(ões) encontrada(s)</span>
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <label htmlFor="ofx-conta" style={{ fontSize: 13, color: 'var(--text-muted)' }}>Importar para</label>
+                <select id="ofx-conta" value={contaId} onChange={e => setContaId(Number(e.target.value))}>
+                  {contas?.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                </select>
                 <button className="btn btn-sm btn-outline" onClick={() => toggleAll(true)}>Selecionar todos</button>
                 <button className="btn btn-sm btn-outline" onClick={() => toggleAll(false)}>Desmarcar todos</button>
               </div>

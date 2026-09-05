@@ -20,7 +20,8 @@ export default function Dashboard() {
   const [transactions, setTransactions] = useState([])
   const [balance, setBalance] = useState({ receitas: 0, despesas: 0, saldo: 0 })
   const [categoryData, setCategoryData] = useState([])
-  const [filters, setFilters] = useState({ tipo: '', categoria: '', data_inicio: '', data_fim: '', busca: '' })
+  const [contas, setContas] = useState([])
+  const [filters, setFilters] = useState({ tipo: '', categoria: '', conta: '', data_inicio: '', data_fim: '', busca: '' })
   const [buscaInput, setBuscaInput] = useState('')
   const [page, setPage] = useState(1)
   const [pagination, setPagination] = useState({ total: 0, totalPages: 1 })
@@ -44,6 +45,7 @@ export default function Dashboard() {
     const params = {}
     if (filters.tipo) params.tipo = filters.tipo
     if (filters.categoria) params.categoria = filters.categoria
+    if (filters.conta) params.conta = filters.conta
     if (filters.data_inicio) params.data_inicio = filters.data_inicio
     if (filters.data_fim) params.data_fim = filters.data_fim
     if (filters.busca) params.busca = filters.busca
@@ -55,10 +57,11 @@ export default function Dashboard() {
     try {
       const params = { ...buildFilterParams(), page, limit: PAGE_SIZE }
 
-      const [txRes, balanceRes, catRes] = await Promise.all([
+      const [txRes, balanceRes, catRes, contasRes] = await Promise.all([
         api.get('/transactions', { params }),
         api.get('/reports/balance'),
         api.get('/reports/categories'),
+        api.get('/contas'),
       ])
 
       setTransactions(txRes.data.transactions)
@@ -69,6 +72,7 @@ export default function Dashboard() {
       }
       setBalance(balanceRes.data)
       setCategoryData(catRes.data)
+      setContas(contasRes.data)
     } catch (err) {
       console.error('Erro ao buscar dados:', err)
       setError('Não foi possível carregar seus dados. Verifique sua conexão e tente novamente.')
@@ -158,9 +162,9 @@ export default function Dashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [buscaInput])
 
-  const hasFilters = filters.tipo || filters.categoria || filters.data_inicio || filters.data_fim || filters.busca
+  const hasFilters = filters.tipo || filters.categoria || filters.conta || filters.data_inicio || filters.data_fim || filters.busca
   const clearFilters = () => {
-    setFilters({ tipo: '', categoria: '', data_inicio: '', data_fim: '', busca: '' })
+    setFilters({ tipo: '', categoria: '', conta: '', data_inicio: '', data_fim: '', busca: '' })
     setBuscaInput('')
     setPage(1)
   }
@@ -183,10 +187,10 @@ export default function Dashboard() {
             <button className="btn btn-outline" onClick={handleExportCsv} disabled={exporting}>
               {exporting ? 'Exportando...' : '↓ Exportar CSV'}
             </button>
-            <button className="btn btn-outline" onClick={() => setShowOFXModal(true)}>
+            <button className="btn btn-outline" onClick={() => setShowOFXModal(true)} disabled={contas.length === 0}>
               ↓ Importar OFX
             </button>
-            <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+            <button className="btn btn-primary" onClick={() => setShowModal(true)} disabled={contas.length === 0}>
               + Nova Transação
             </button>
           </div>
@@ -223,6 +227,12 @@ export default function Dashboard() {
                   <option value="">Todas as categorias</option>
                   {TODAS_CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
+                {contas.length > 1 && (
+                  <select value={filters.conta} onChange={e => updateFilters({ conta: e.target.value })}>
+                    <option value="">Todas as contas</option>
+                    {contas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                  </select>
+                )}
                 <input
                   type="date"
                   value={filters.data_inicio}
@@ -295,6 +305,7 @@ export default function Dashboard() {
       {showModal && (
         <TransactionModal
           transaction={editingTransaction}
+          contas={contas}
           onClose={handleModalClose}
           onSaved={handleSaved}
         />
@@ -302,6 +313,7 @@ export default function Dashboard() {
 
       {showOFXModal && (
         <OFXImportModal
+          contas={contas}
           onClose={() => setShowOFXModal(false)}
           onImported={fetchData}
         />

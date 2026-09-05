@@ -62,6 +62,7 @@ async function ensureOccurrences(usuarioId) {
     await prisma.transacao.createMany({
       data: faltantes.map(data => ({
         usuarioId,
+        contaId: r.contaId,
         tipo: r.tipo,
         valor: r.valor,
         categoria: r.categoria,

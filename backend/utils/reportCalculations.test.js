@@ -23,6 +23,11 @@ describe('calculateBalance', () => {
   it('retorna tudo zerado quando não há transações', () => {
     expect(calculateBalance([])).toEqual({ receitas: 0, despesas: 0, saldo: 0 });
   });
+
+  it('soma o saldoInicial das contas ao saldo, sem afetar receitas/despesas', () => {
+    const rows = [{ tipo: 'receita', _sum: { valor: 1000 } }];
+    expect(calculateBalance(rows, 500)).toEqual({ receitas: 1000, despesas: 0, saldo: 1500 });
+  });
 });
 
 describe('summarizeTransactions', () => {

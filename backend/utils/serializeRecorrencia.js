@@ -12,6 +12,7 @@ function serializeRecorrencia(r) {
     dataFim: r.dataFim,
     ativa: r.ativa,
     createdAt: r.createdAt,
+    contaId: r.contaId,
   };
 }
 

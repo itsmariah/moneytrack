@@ -9,6 +9,7 @@ import { SkeletonList } from '../components/Skeleton'
 
 export default function Recurring() {
   const [recorrencias, setRecorrencias] = useState([])
+  const [contas, setContas] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
@@ -25,8 +26,12 @@ export default function Recurring() {
   const fetchRecorrencias = useCallback(async () => {
     setError('')
     try {
-      const { data } = await api.get('/recorrencias')
-      setRecorrencias(data)
+      const [recRes, contasRes] = await Promise.all([
+        api.get('/recorrencias'),
+        api.get('/contas'),
+      ])
+      setRecorrencias(recRes.data)
+      setContas(contasRes.data)
     } catch (err) {
       console.error('Erro ao buscar recorrências:', err)
       setError('Não foi possível carregar suas recorrências. Verifique sua conexão e tente novamente.')
@@ -83,7 +88,7 @@ export default function Recurring() {
       <main className="main-content">
         <div className="dashboard-header">
           <h2>Transações recorrentes</h2>
-          <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+          <button className="btn btn-primary" onClick={() => setShowModal(true)} disabled={contas.length === 0}>
             + Nova recorrência
           </button>
         </div>
@@ -124,6 +129,7 @@ export default function Recurring() {
       {showModal && (
         <RecurringModal
           recorrencia={editing}
+          contas={contas}
           onClose={handleModalClose}
           onSaved={handleSaved}
         />

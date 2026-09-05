@@ -1,0 +1,201 @@
+import { useState, useEffect, useCallback } from 'react'
+import api from '../services/api'
+import Navbar from '../components/Navbar'
+import ContaModal from '../components/ContaModal'
+import ContaCard from '../components/ContaCard'
+import TransferModal from '../components/TransferModal'
+import ConfirmDialog from '../components/ConfirmDialog'
+import Alert from '../components/Alert'
+import { SkeletonList } from '../components/Skeleton'
+import { fmt, fmtDate } from '../utils/format'
+
+export default function Contas() {
+  const [contas, setContas] = useState([])
+  const [transferencias, setTransferencias] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [toast, setToast] = useState('')
+  const [showContaModal, setShowContaModal] = useState(false)
+  const [editingConta, setEditingConta] = useState(null)
+  const [showTransferModal, setShowTransferModal] = useState(false)
+  const [deleteConta, setDeleteConta] = useState(null)
+  const [deleteTransferId, setDeleteTransferId] = useState(null)
+
+  useEffect(() => {
+    if (!toast) return
+    const timer = setTimeout(() => setToast(''), 3000)
+    return () => clearTimeout(timer)
+  }, [toast])
+
+  const fetchData = useCallback(async () => {
+    setError('')
+    try {
+      const [contasRes, transfRes] = await Promise.all([
+        api.get('/contas'),
+        api.get('/transferencias'),
+      ])
+      setContas(contasRes.data)
+      setTransferencias(transfRes.data)
+    } catch (err) {
+      console.error('Erro ao buscar contas:', err)
+      setError('Não foi possível carregar suas contas. Verifique sua conexão e tente novamente.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { fetchData() }, [fetchData])
+
+  const handleEdit = (conta) => {
+    setEditingConta(conta)
+    setShowContaModal(true)
+  }
+
+  const handleContaModalClose = () => {
+    setShowContaModal(false)
+    setEditingConta(null)
+  }
+
+  const handleContaSaved = () => {
+    setToast(editingConta ? 'Conta atualizada com sucesso.' : 'Conta criada com sucesso.')
+    handleContaModalClose()
+    fetchData()
+  }
+
+  const confirmDeleteConta = async () => {
+    const conta = deleteConta
+    setDeleteConta(null)
+    try {
+      await api.delete(`/contas/${conta.id}`)
+      setToast('Conta excluída.')
+      fetchData()
+    } catch (err) {
+      setError(err.response?.data?.error || 'Não foi possível excluir a conta. Tente novamente.')
+    }
+  }
+
+  const handleTransferSaved = () => {
+    setToast('Transferência realizada com sucesso.')
+    setShowTransferModal(false)
+    fetchData()
+  }
+
+  const confirmDeleteTransfer = async () => {
+    const id = deleteTransferId
+    setDeleteTransferId(null)
+    try {
+      await api.delete(`/transferencias/${id}`)
+      setToast('Transferência desfeita.')
+      fetchData()
+    } catch (err) {
+      console.error(err)
+      setError('Não foi possível desfazer a transferência. Tente novamente.')
+    }
+  }
+
+  return (
+    <div className="app-layout">
+      <Navbar />
+      <main className="main-content">
+        <div className="dashboard-header">
+          <h2>Contas</h2>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {contas.length > 1 && (
+              <button className="btn btn-outline" onClick={() => setShowTransferModal(true)}>
+                ⇄ Transferir
+              </button>
+            )}
+            <button className="btn btn-primary" onClick={() => setShowContaModal(true)}>
+              + Nova conta
+            </button>
+          </div>
+        </div>
+
+        {error && (
+          <Alert type="error" className="alert-with-action">
+            <span>{error}</span>
+            <button className="btn btn-sm btn-outline" onClick={fetchData}>Tentar novamente</button>
+          </Alert>
+        )}
+
+        {loading ? (
+          <SkeletonList rows={3} />
+        ) : (
+          <>
+            <div className="goals-grid">
+              {contas.map(conta => (
+                <ContaCard
+                  key={conta.id}
+                  conta={conta}
+                  onEdit={handleEdit}
+                  onDelete={setDeleteConta}
+                />
+              ))}
+            </div>
+
+            {transferencias.length > 0 && (
+              <div className="transactions-section" style={{ marginTop: 24 }}>
+                <div className="section-header">
+                  <h3>Transferências</h3>
+                </div>
+                <ul className="transaction-list">
+                  {transferencias.map(t => (
+                    <li key={t.id} className="transaction-item">
+                      <div className="tx-icon">⇄</div>
+                      <div className="tx-info">
+                        <span className="tx-desc">{t.contaOrigemNome} → {t.contaDestinoNome}{t.descricao ? ` · ${t.descricao}` : ''}</span>
+                        <span className="tx-meta">{fmtDate(t.data)}</span>
+                      </div>
+                      <div className="tx-amount">{fmt(t.valor)}</div>
+                      <div className="tx-actions">
+                        <button className="btn-icon btn-danger" onClick={() => setDeleteTransferId(t.id)} title="Desfazer">🗑️</button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </>
+        )}
+      </main>
+
+      {showContaModal && (
+        <ContaModal
+          conta={editingConta}
+          onClose={handleContaModalClose}
+          onSaved={handleContaSaved}
+        />
+      )}
+
+      {showTransferModal && (
+        <TransferModal
+          contas={contas}
+          onClose={() => setShowTransferModal(false)}
+          onSaved={handleTransferSaved}
+        />
+      )}
+
+      {deleteConta && (
+        <ConfirmDialog
+          title="Excluir conta"
+          message={`Tem certeza que deseja excluir "${deleteConta.nome}"? Todas as transações e transferências dessa conta também serão apagadas. Essa ação não pode ser desfeita.`}
+          confirmLabel="Excluir"
+          onConfirm={confirmDeleteConta}
+          onCancel={() => setDeleteConta(null)}
+        />
+      )}
+
+      {deleteTransferId !== null && (
+        <ConfirmDialog
+          title="Desfazer transferência"
+          message="Tem certeza que deseja desfazer esta transferência? O valor volta a ser considerado só na conta de origem. Essa ação não pode ser desfeita."
+          confirmLabel="Desfazer"
+          onConfirm={confirmDeleteTransfer}
+          onCancel={() => setDeleteTransferId(null)}
+        />
+      )}
+
+      {toast && <div className="toast" role="status">{toast}</div>}
+    </div>
+  )
+}

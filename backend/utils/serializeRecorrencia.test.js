@@ -6,11 +6,11 @@ describe('serializeRecorrencia', () => {
   it('converte valor (Decimal) para number, preservando os demais campos', () => {
     const r = {
       id: 1, tipo: 'despesa', valor: new Prisma.Decimal('1200.00'), categoria: 'Moradia',
-      descricao: 'Aluguel', diaDoMes: 5, dataInicio: '2026-08-01', dataFim: null, ativa: true, createdAt: '2026-08-01T00:00:00.000Z',
+      descricao: 'Aluguel', diaDoMes: 5, dataInicio: '2026-08-01', dataFim: null, ativa: true, createdAt: '2026-08-01T00:00:00.000Z', contaId: 1,
     };
     expect(serializeRecorrencia(r)).toEqual({
       id: 1, tipo: 'despesa', valor: 1200, categoria: 'Moradia', descricao: 'Aluguel',
-      diaDoMes: 5, dataInicio: '2026-08-01', dataFim: null, ativa: true, createdAt: '2026-08-01T00:00:00.000Z',
+      diaDoMes: 5, dataInicio: '2026-08-01', dataFim: null, ativa: true, createdAt: '2026-08-01T00:00:00.000Z', contaId: 1,
     });
   });
 });

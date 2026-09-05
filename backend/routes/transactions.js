@@ -14,6 +14,14 @@ router.use(authMiddleware);
 
 const MAX_BULK_ITEMS = 500;
 
+// Confere que a conta existe e pertence ao usuário do token (evita atribuir uma
+// transação a uma conta de outro usuário via IDOR).
+async function contaPertenceAoUsuario(usuarioId, contaId) {
+  if (!contaId) return false;
+  const conta = await prisma.conta.findFirst({ where: { id: Number(contaId), usuarioId } });
+  return Boolean(conta);
+}
+
 // Limite geral para todas as rotas de transação, por usuário autenticado (não por IP)
 const dataLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -38,14 +46,14 @@ const bulkImportLimiter = rateLimit({
 // RF08 - Listar transações (com filtros RF10 e RF11), paginada
 router.get('/', async (req, res) => {
   try {
-    const { tipo, categoria, data_inicio, data_fim, busca, page, limit } = req.query;
+    const { tipo, categoria, conta, data_inicio, data_fim, busca, page, limit } = req.query;
 
     // Materializa aqui (não só na tela de recorrências) porque é a rota que o
     // Dashboard chama sempre que a página abre — garante que ocorrências vencidas
     // apareçam sem o usuário precisar visitar a tela de recorrências primeiro.
     await ensureOccurrences(req.userId);
 
-    const where = buildTransactionWhere(req.userId, { tipo, categoria, data_inicio, data_fim, busca });
+    const where = buildTransactionWhere(req.userId, { tipo, categoria, contaId: conta, data_inicio, data_fim, busca });
     const { page: pageNum, limit: pageSize, skip } = parsePagination(page, limit);
 
     const [rawTransactions, total] = await Promise.all([
@@ -67,8 +75,8 @@ router.get('/', async (req, res) => {
 // Exportação em CSV (respeita os mesmos filtros de tipo/categoria/período/busca da listagem)
 router.get('/export', async (req, res) => {
   try {
-    const { tipo, categoria, data_inicio, data_fim, busca } = req.query;
-    const where = buildTransactionWhere(req.userId, { tipo, categoria, data_inicio, data_fim, busca });
+    const { tipo, categoria, conta, data_inicio, data_fim, busca } = req.query;
+    const where = buildTransactionWhere(req.userId, { tipo, categoria, contaId: conta, data_inicio, data_fim, busca });
 
     const rawTransactions = await prisma.transacao.findMany({
       where,
@@ -87,12 +95,15 @@ router.get('/export', async (req, res) => {
 // Importação em lote (OFX)
 router.post('/bulk', bulkImportLimiter, async (req, res) => {
   try {
-    const { transactions } = req.body;
+    const { transactions, contaId } = req.body;
     if (!Array.isArray(transactions) || transactions.length === 0) {
       return res.status(400).json({ error: 'Lista de transações inválida' });
     }
     if (transactions.length > MAX_BULK_ITEMS) {
       return res.status(400).json({ error: `Máximo de ${MAX_BULK_ITEMS} transações por importação` });
+    }
+    if (!(await contaPertenceAoUsuario(req.userId, contaId))) {
+      return res.status(400).json({ error: 'Conta inválida' });
     }
     for (const t of transactions) {
       const validationError = validateTransactionInput(t);
@@ -101,6 +112,7 @@ router.post('/bulk', bulkImportLimiter, async (req, res) => {
     const created = await prisma.transacao.createMany({
       data: transactions.map(t => ({
         usuarioId: req.userId,
+        contaId: Number(contaId),
         tipo: t.tipo,
         valor: Number(t.valor),
         categoria: t.categoria,
@@ -117,14 +129,18 @@ router.post('/bulk', bulkImportLimiter, async (req, res) => {
 // RF04/RF05 - Cadastrar receita ou despesa
 router.post('/', async (req, res) => {
   try {
-    const { tipo, valor, categoria, descricao, data } = req.body;
+    const { tipo, valor, categoria, descricao, data, contaId } = req.body;
 
     const validationError = validateTransactionInput(req.body);
     if (validationError) return res.status(400).json({ error: validationError });
+    if (!(await contaPertenceAoUsuario(req.userId, contaId))) {
+      return res.status(400).json({ error: 'Conta inválida' });
+    }
 
     const created = await prisma.transacao.create({
       data: {
         usuarioId: req.userId,
+        contaId: Number(contaId),
         tipo,
         valor: Number(valor),
         categoria,
@@ -142,17 +158,20 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const id = Number(req.params.id);
-    const { tipo, valor, categoria, descricao, data } = req.body;
+    const { tipo, valor, categoria, descricao, data, contaId } = req.body;
 
     const existing = await prisma.transacao.findFirst({ where: { id, usuarioId: req.userId } });
     if (!existing) return res.status(404).json({ error: 'Transação não encontrada' });
 
     const validationError = validateTransactionInput(req.body);
     if (validationError) return res.status(400).json({ error: validationError });
+    if (!(await contaPertenceAoUsuario(req.userId, contaId))) {
+      return res.status(400).json({ error: 'Conta inválida' });
+    }
 
     const updated = await prisma.transacao.update({
       where: { id },
-      data: { tipo, valor: Number(valor), categoria, descricao: descricao || '', data },
+      data: { tipo, valor: Number(valor), categoria, descricao: descricao || '', data, contaId: Number(contaId) },
     });
     res.json(serializeTransaction(updated));
   } catch (err) {

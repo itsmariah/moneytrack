@@ -17,6 +17,8 @@ beforeEach(() => {
   // GET / materializa recorrências vencidas antes de listar — sem recorrência ativa
   // nenhuma, não deve gerar nada (ver describe dedicado mais abaixo).
   vi.spyOn(prisma.recorrencia, 'findMany').mockResolvedValue([]);
+  // contaPertenceAoUsuario: por padrão a conta 1 existe e é do usuário 7.
+  vi.spyOn(prisma.conta, 'findFirst').mockResolvedValue({ id: 1, usuarioId: 7 });
 });
 
 afterEach(() => {
@@ -65,11 +67,12 @@ describe('POST /api/transactions', () => {
     const res = await request(app)
       .post('/api/transactions')
       .set('Authorization', `Bearer ${token}`)
-      .send({ usuarioId: 999, tipo: 'despesa', valor: 50, categoria: 'Lazer', data: '2026-08-10' });
+      .send({ usuarioId: 999, tipo: 'despesa', valor: 50, categoria: 'Lazer', data: '2026-08-10', contaId: 1 });
 
     expect(res.status).toBe(201);
     expect(res.body.valor).toBe(50);
     expect(createSpy.mock.calls[0][0].data.usuarioId).toBe(7);
+    expect(createSpy.mock.calls[0][0].data.contaId).toBe(1);
   });
 
   it('rejeita corpo inválido (400) e não chama o Prisma', async () => {
@@ -78,7 +81,20 @@ describe('POST /api/transactions', () => {
     const res = await request(app)
       .post('/api/transactions')
       .set('Authorization', `Bearer ${token}`)
-      .send({ tipo: 'despesa', valor: 50, categoria: 'Lazer', data: '30/08/2026' });
+      .send({ tipo: 'despesa', valor: 50, categoria: 'Lazer', data: '30/08/2026', contaId: 1 });
+
+    expect(res.status).toBe(400);
+    expect(createSpy).not.toHaveBeenCalled();
+  });
+
+  it('rejeita quando a conta não pertence ao usuário (400, proteção contra IDOR)', async () => {
+    vi.spyOn(prisma.conta, 'findFirst').mockResolvedValue(null);
+    const createSpy = vi.spyOn(prisma.transacao, 'create');
+
+    const res = await request(app)
+      .post('/api/transactions')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ tipo: 'despesa', valor: 50, categoria: 'Lazer', data: '2026-08-10', contaId: 999 });
 
     expect(res.status).toBe(400);
     expect(createSpy).not.toHaveBeenCalled();
@@ -108,7 +124,7 @@ describe('PUT /api/transactions/:id', () => {
     const res = await request(app)
       .put('/api/transactions/5')
       .set('Authorization', `Bearer ${token}`)
-      .send({ tipo: 'receita', valor: 100, categoria: 'Salário', data: '2026-08-10' });
+      .send({ tipo: 'receita', valor: 100, categoria: 'Salário', data: '2026-08-10', contaId: 1 });
 
     expect(res.status).toBe(200);
     expect(res.body.valor).toBe(100);
@@ -141,17 +157,18 @@ describe('POST /api/transactions/bulk', () => {
     const res = await request(app)
       .post('/api/transactions/bulk')
       .set('Authorization', `Bearer ${token}`)
-      .send({ transactions: many });
+      .send({ transactions: many, contaId: 1 });
     expect(res.status).toBe(400);
   });
 
   it('importa um lote válido (201) com o count retornado', async () => {
-    vi.spyOn(prisma.transacao, 'createMany').mockResolvedValue({ count: 2 });
+    const createManySpy = vi.spyOn(prisma.transacao, 'createMany').mockResolvedValue({ count: 2 });
 
     const res = await request(app)
       .post('/api/transactions/bulk')
       .set('Authorization', `Bearer ${token}`)
       .send({
+        contaId: 1,
         transactions: [
           { tipo: 'despesa', valor: 10, categoria: 'Lazer', data: '2026-08-10' },
           { tipo: 'receita', valor: 20, categoria: 'Salário', data: '2026-08-11' },
@@ -160,6 +177,20 @@ describe('POST /api/transactions/bulk', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.count).toBe(2);
+    expect(createManySpy.mock.calls[0][0].data.every(t => t.contaId === 1)).toBe(true);
+  });
+
+  it('rejeita quando a conta do lote não pertence ao usuário (400)', async () => {
+    vi.spyOn(prisma.conta, 'findFirst').mockResolvedValue(null);
+    const createManySpy = vi.spyOn(prisma.transacao, 'createMany');
+
+    const res = await request(app)
+      .post('/api/transactions/bulk')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ contaId: 999, transactions: [{ tipo: 'despesa', valor: 10, categoria: 'Lazer', data: '2026-08-10' }] });
+
+    expect(res.status).toBe(400);
+    expect(createManySpy).not.toHaveBeenCalled();
   });
 });
 

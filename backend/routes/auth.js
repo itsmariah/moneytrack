@@ -59,6 +59,10 @@ router.post('/register', registerLimiter, async (req, res) => {
     const hash = await bcrypt.hash(senha, 10);
     const user = await prisma.usuario.create({ data: { nome, email, senha: hash } });
 
+    // Toda transação exige uma conta — sem isso o usuário ficaria sem conseguir
+    // lançar a primeira, já que o app não pede pra "criar uma conta" no cadastro.
+    await prisma.conta.create({ data: { usuarioId: user.id, nome: 'Conta principal', tipo: 'corrente', saldoInicial: 0 } });
+
     const token = jwt.sign({ id: user.id, tokenVersion: user.tokenVersion }, JWT_SECRET, { expiresIn: '7d' });
     res.status(201).json({ token, user: { id: user.id, nome: user.nome, email: user.email, foto: user.foto } });
   } catch (err) {

@@ -5,6 +5,8 @@ const reportsRoutes = require('../routes/reports');
 const metasRoutes = require('../routes/metas');
 const orcamentosRoutes = require('../routes/orcamentos');
 const recorrenciasRoutes = require('../routes/recorrencias');
+const contasRoutes = require('../routes/contas');
+const transferenciasRoutes = require('../routes/transferencias');
 
 // Réplica mínima da montagem de rotas do server.js, sem helmet/cors/app.listen —
 // os testes de integração só precisam do roteamento + middlewares de cada router.
@@ -17,6 +19,8 @@ function createTestApp() {
   app.use('/api/metas', metasRoutes);
   app.use('/api/orcamentos', orcamentosRoutes);
   app.use('/api/recorrencias', recorrenciasRoutes);
+  app.use('/api/contas', contasRoutes);
+  app.use('/api/transferencias', transferenciasRoutes);
   return app;
 }
 

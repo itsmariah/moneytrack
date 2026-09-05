@@ -20,6 +20,14 @@ const dataLimiter = rateLimit({
 });
 router.use(dataLimiter);
 
+// Confere que a conta existe e pertence ao usuário do token (evita atribuir uma
+// recorrência a uma conta de outro usuário via IDOR).
+async function contaPertenceAoUsuario(usuarioId, contaId) {
+  if (!contaId) return false;
+  const conta = await prisma.conta.findFirst({ where: { id: Number(contaId), usuarioId } });
+  return Boolean(conta);
+}
+
 // Listar recorrências do usuário — materializa antes qualquer ocorrência já vencida
 router.get('/', async (req, res) => {
   try {
@@ -37,14 +45,18 @@ router.get('/', async (req, res) => {
 // Criar recorrência
 router.post('/', async (req, res) => {
   try {
-    const { tipo, valor, categoria, descricao, diaDoMes, dataInicio, dataFim } = req.body;
+    const { tipo, valor, categoria, descricao, diaDoMes, dataInicio, dataFim, contaId } = req.body;
 
     const validationError = validateRecorrenciaInput(req.body);
     if (validationError) return res.status(400).json({ error: validationError });
+    if (!(await contaPertenceAoUsuario(req.userId, contaId))) {
+      return res.status(400).json({ error: 'Conta inválida' });
+    }
 
     const created = await prisma.recorrencia.create({
       data: {
         usuarioId: req.userId,
+        contaId: Number(contaId),
         tipo,
         valor: Number(valor),
         categoria,
@@ -68,13 +80,16 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const id = Number(req.params.id);
-    const { tipo, valor, categoria, descricao, diaDoMes, dataFim, ativa } = req.body;
+    const { tipo, valor, categoria, descricao, diaDoMes, dataFim, ativa, contaId } = req.body;
 
     const existing = await prisma.recorrencia.findFirst({ where: { id, usuarioId: req.userId } });
     if (!existing) return res.status(404).json({ error: 'Recorrência não encontrada' });
 
-    const validationError = validateRecorrenciaInput({ tipo, valor, categoria, diaDoMes, dataInicio: existing.dataInicio, dataFim });
+    const validationError = validateRecorrenciaInput({ tipo, valor, categoria, diaDoMes, dataInicio: existing.dataInicio, dataFim, contaId });
     if (validationError) return res.status(400).json({ error: validationError });
+    if (!(await contaPertenceAoUsuario(req.userId, contaId))) {
+      return res.status(400).json({ error: 'Conta inválida' });
+    }
 
     const updated = await prisma.recorrencia.update({
       where: { id },
@@ -86,6 +101,7 @@ router.put('/:id', async (req, res) => {
         diaDoMes: Number(diaDoMes),
         dataFim: dataFim || null,
         ativa: ativa === undefined ? existing.ativa : Boolean(ativa),
+        contaId: Number(contaId),
       },
     });
 

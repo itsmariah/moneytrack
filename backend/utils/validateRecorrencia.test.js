@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { validateRecorrenciaInput } from './validateRecorrencia.js';
 
 describe('validateRecorrenciaInput', () => {
-  const base = { tipo: 'despesa', valor: 1200, categoria: 'Moradia', diaDoMes: 5, dataInicio: '2026-08-01' };
+  const base = { tipo: 'despesa', valor: 1200, categoria: 'Moradia', diaDoMes: 5, dataInicio: '2026-08-01', contaId: 1 };
 
   it('não retorna erro para uma recorrência válida sem dataFim', () => {
     expect(validateRecorrenciaInput(base)).toBeNull();
@@ -14,6 +14,10 @@ describe('validateRecorrenciaInput', () => {
 
   it('exige todos os campos obrigatórios', () => {
     expect(validateRecorrenciaInput({ ...base, categoria: '' })).toMatch(/Campos obrigatórios/);
+  });
+
+  it('exige contaId', () => {
+    expect(validateRecorrenciaInput({ ...base, contaId: undefined })).toMatch(/Campos obrigatórios/);
   });
 
   it('rejeita tipo fora de receita/despesa', () => {

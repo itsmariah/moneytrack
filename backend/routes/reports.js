@@ -35,15 +35,15 @@ router.get('/balance', async (req, res) => {
       if (end) where.data.lte = end;
     }
 
-    const rows = await prisma.transacao.groupBy({
-      by: ['tipo'],
-      where,
-      _sum: { valor: true },
-    });
+    const [rows, contas] = await Promise.all([
+      prisma.transacao.groupBy({ by: ['tipo'], where, _sum: { valor: true } }),
+      prisma.conta.findMany({ where: { usuarioId: req.userId }, select: { saldoInicial: true } }),
+    ]);
 
     // _sum.valor vem como Prisma.Decimal — convertemos para number antes de somar/subtrair.
     const normalized = rows.map(r => ({ tipo: r.tipo, _sum: { valor: Number(r._sum.valor) } }));
-    res.json(calculateBalance(normalized));
+    const saldoInicialTotal = contas.reduce((soma, c) => soma + Number(c.saldoInicial), 0);
+    res.json(calculateBalance(normalized, saldoInicialTotal));
   } catch (err) {
     res.status(500).json({ error: 'Erro ao calcular saldo' });
   }

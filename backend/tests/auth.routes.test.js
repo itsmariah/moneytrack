@@ -25,6 +25,7 @@ describe('POST /api/auth/register', () => {
   it('cria um usuário e retorna token + dados básicos (201)', async () => {
     vi.spyOn(prisma.usuario, 'findUnique').mockResolvedValue(null);
     vi.spyOn(prisma.usuario, 'create').mockResolvedValue({ id: 1, nome: 'Ana', email: 'ana@example.com', foto: null, tokenVersion: 0 });
+    const contaCreateSpy = vi.spyOn(prisma.conta, 'create').mockResolvedValue({ id: 1 });
 
     const res = await request(app)
       .post('/api/auth/register')
@@ -33,6 +34,8 @@ describe('POST /api/auth/register', () => {
     expect(res.status).toBe(201);
     expect(res.body.token).toBeTruthy();
     expect(res.body.user).toEqual({ id: 1, nome: 'Ana', email: 'ana@example.com', foto: null });
+    // Toda transação exige conta — o cadastro precisa deixar o usuário já pronto pra lançar a primeira.
+    expect(contaCreateSpy.mock.calls[0][0].data.usuarioId).toBe(1);
   });
 
   it('rejeita e-mail já cadastrado (409)', async () => {

@@ -19,6 +19,7 @@ export default function Navbar() {
 
       <nav className="navbar-nav">
         <Link to="/dashboard" className={isActive('/dashboard')}>Dashboard</Link>
+        <Link to="/contas" className={isActive('/contas')}>Contas</Link>
         <Link to="/relatorios" className={isActive('/relatorios')}>Relatórios</Link>
         <Link to="/metas" className={isActive('/metas')}>Metas</Link>
         <Link to="/orcamentos" className={isActive('/orcamentos')}>Orçamentos</Link>

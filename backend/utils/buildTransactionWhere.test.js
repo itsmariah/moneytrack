@@ -49,4 +49,8 @@ describe('buildTransactionWhere', () => {
   it('ignora busca vazia', () => {
     expect(buildTransactionWhere(1, { busca: '' })).toEqual({ usuarioId: 1 });
   });
+
+  it('adiciona contaId como number quando informado', () => {
+    expect(buildTransactionWhere(1, { contaId: '3' })).toEqual({ usuarioId: 1, contaId: 3 });
+  });
 });

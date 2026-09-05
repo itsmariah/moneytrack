@@ -13,13 +13,14 @@ function todayLocal() {
   return `${now.getFullYear()}-${mes}-${dia}`
 }
 
-export default function TransactionModal({ transaction, onClose, onSaved }) {
+export default function TransactionModal({ transaction, contas, onClose, onSaved }) {
   const [form, setForm] = useState({
     tipo: 'despesa',
     valor: '',
     categoria: 'Outros',
     descricao: '',
     data: todayLocal(),
+    contaId: transaction?.contaId || contas?.[0]?.id || '',
   })
   const [customCategoria, setCustomCategoria] = useState('')
   const [error, setError] = useState('')
@@ -35,6 +36,7 @@ export default function TransactionModal({ transaction, onClose, onSaved }) {
         categoria: isCustom ? 'Outros' : transaction.categoria,
         descricao: transaction.descricao || '',
         data: transaction.data,
+        contaId: transaction.contaId,
       })
       setCustomCategoria(isCustom ? transaction.categoria : '')
     }
@@ -141,6 +143,17 @@ export default function TransactionModal({ transaction, onClose, onSaved }) {
               />
             </div>
           )}
+
+          <div className="form-group">
+            <label htmlFor="tx-conta">Conta</label>
+            <select
+              id="tx-conta"
+              value={form.contaId}
+              onChange={e => setForm({ ...form, contaId: Number(e.target.value) })}
+            >
+              {contas?.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+            </select>
+          </div>
 
           <div className="form-group">
             <label htmlFor="tx-descricao">Descrição (opcional)</label>

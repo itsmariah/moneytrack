@@ -13,7 +13,7 @@ function todayLocal() {
   return `${now.getFullYear()}-${mes}-${dia}`
 }
 
-export default function RecurringModal({ recorrencia, onClose, onSaved }) {
+export default function RecurringModal({ recorrencia, contas, onClose, onSaved }) {
   const [form, setForm] = useState({
     tipo: recorrencia?.tipo || 'despesa',
     valor: recorrencia?.valor ?? '',
@@ -23,6 +23,7 @@ export default function RecurringModal({ recorrencia, onClose, onSaved }) {
     dataInicio: recorrencia?.dataInicio || todayLocal(),
     dataFim: recorrencia?.dataFim || '',
     ativa: recorrencia?.ativa ?? true,
+    contaId: recorrencia?.contaId || contas?.[0]?.id || '',
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -99,6 +100,17 @@ export default function RecurringModal({ recorrencia, onClose, onSaved }) {
             onChange={e => setForm({ ...form, categoria: e.target.value })}
           >
             {categoriasPorTipo(form.tipo).map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="rec-conta">Conta</label>
+          <select
+            id="rec-conta"
+            value={form.contaId}
+            onChange={e => setForm({ ...form, contaId: Number(e.target.value) })}
+          >
+            {contas?.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
           </select>
         </div>
 
