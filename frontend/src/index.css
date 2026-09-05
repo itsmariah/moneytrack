@@ -488,6 +488,28 @@ input[type="month"]::-webkit-calendar-picker-indicator { filter: var(--picker-in
 .positive { color: var(--green); }
 .negative { color: var(--red); }
 
+/* ── INSIGHTS ── */
+.insights-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
+.insight-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex: 1 1 260px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.insight-card--atencao { border-left-color: var(--red); }
+.insight-card--positivo { border-left-color: var(--green); }
+.insight-card--neutro { border-left-color: var(--primary); }
+.insight-icon { font-size: 16px; flex-shrink: 0; line-height: 1.4; }
+.insight-text { color: var(--text); }
+.insight-text strong { font-weight: 700; }
+
 /* ── DASHBOARD GRID ── */
 .dashboard-grid { display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start; }
 .transactions-section { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }

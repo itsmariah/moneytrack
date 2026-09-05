@@ -34,4 +34,25 @@ function buildMonthlyEvolution(transactions) {
   return Object.values(monthMap).sort((a, b) => a.mes.localeCompare(b.mes));
 }
 
-module.exports = { calculateBalance, summarizeTransactions, getMonthDateRange, buildMonthlyEvolution };
+// Mês corrente (YYYY-MM) no horário local do servidor.
+function currentMonthStr() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+// Mês anterior (YYYY-MM) a partir de um mês (YYYY-MM) — usa índice absoluto de mês
+// (ano*12+mês) pra virar o ano corretamente em janeiro sem lógica condicional.
+function previousMonthStr(month) {
+  const [year, monthNum] = month.split('-').map(Number);
+  const idx = year * 12 + (monthNum - 1) - 1;
+  return `${Math.floor(idx / 12)}-${String((idx % 12) + 1).padStart(2, '0')}`;
+}
+
+module.exports = {
+  calculateBalance,
+  summarizeTransactions,
+  getMonthDateRange,
+  buildMonthlyEvolution,
+  currentMonthStr,
+  previousMonthStr,
+};

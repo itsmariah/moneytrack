@@ -1,9 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   calculateBalance,
   summarizeTransactions,
   getMonthDateRange,
   buildMonthlyEvolution,
+  currentMonthStr,
+  previousMonthStr,
 } from './reportCalculations.js';
 
 describe('calculateBalance', () => {
@@ -88,5 +90,25 @@ describe('buildMonthlyEvolution', () => {
 
   it('retorna array vazio quando não há transações', () => {
     expect(buildMonthlyEvolution([])).toEqual([]);
+  });
+});
+
+describe('currentMonthStr', () => {
+  afterEach(() => vi.useRealTimers());
+
+  it('retorna o mês corrente no formato YYYY-MM', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-15T12:00:00'));
+    expect(currentMonthStr()).toBe('2026-08');
+  });
+});
+
+describe('previousMonthStr', () => {
+  it('retorna o mês anterior dentro do mesmo ano', () => {
+    expect(previousMonthStr('2026-08')).toBe('2026-07');
+  });
+
+  it('vira o ano corretamente em janeiro', () => {
+    expect(previousMonthStr('2026-01')).toBe('2025-12');
   });
 });

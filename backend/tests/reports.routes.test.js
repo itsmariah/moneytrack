@@ -105,6 +105,40 @@ describe('GET /api/reports/categories', () => {
   });
 });
 
+describe('GET /api/reports/insights', () => {
+  it('retorna 401 sem token', async () => {
+    const res = await request(app).get('/api/reports/insights');
+    expect(res.status).toBe(401);
+  });
+
+  it('cruza categorias, orçamentos e metas do usuário e devolve os insights gerados', async () => {
+    vi.spyOn(prisma.transacao, 'groupBy')
+      .mockResolvedValueOnce([{ categoria: 'Alimentação', tipo: 'despesa', _sum: { valor: new Prisma.Decimal('1150.00') } }]) // mês atual
+      .mockResolvedValueOnce([{ categoria: 'Alimentação', tipo: 'despesa', _sum: { valor: new Prisma.Decimal('1000.00') } }]); // mês anterior
+    vi.spyOn(prisma.orcamento, 'findMany').mockResolvedValue([
+      { categoria: 'Alimentação', valorLimite: new Prisma.Decimal('800.00') },
+    ]);
+    vi.spyOn(prisma.meta, 'findMany').mockResolvedValue([]);
+
+    const res = await request(app).get('/api/reports/insights').set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toContainEqual(expect.objectContaining({ tipo: 'orcamento_estourado', categoria: 'Alimentação', valorLimite: 800, gasto: 1150 }));
+    expect(res.body).toContainEqual(expect.objectContaining({ tipo: 'categoria_aumento', categoria: 'Alimentação' }));
+  });
+
+  it('escopa as consultas por usuarioId do token', async () => {
+    const groupBySpy = vi.spyOn(prisma.transacao, 'groupBy').mockResolvedValue([]);
+    vi.spyOn(prisma.orcamento, 'findMany').mockResolvedValue([]);
+    const metaSpy = vi.spyOn(prisma.meta, 'findMany').mockResolvedValue([]);
+
+    await request(app).get('/api/reports/insights?usuarioId=999').set('Authorization', `Bearer ${token}`);
+
+    expect(groupBySpy.mock.calls[0][0].where.usuarioId).toBe(7);
+    expect(metaSpy.mock.calls[0][0].where.usuarioId).toBe(7);
+  });
+});
+
 describe('GET /api/reports/evolution', () => {
   it('agrupa por mês somando receitas e despesas separadamente (200)', async () => {
     vi.spyOn(prisma.transacao, 'findMany').mockResolvedValue([

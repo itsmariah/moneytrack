@@ -7,6 +7,7 @@ import TransactionModal from '../components/TransactionModal'
 import TransactionList from '../components/TransactionList'
 import ExpensePieChart from '../components/charts/ExpensePieChart'
 import OFXImportModal from '../components/OFXImportModal'
+import InsightsPanel from '../components/InsightsPanel'
 import ConfirmDialog from '../components/ConfirmDialog'
 import Alert from '../components/Alert'
 import { SkeletonCards, SkeletonList, SkeletonChart } from '../components/Skeleton'
@@ -21,6 +22,7 @@ export default function Dashboard() {
   const [balance, setBalance] = useState({ receitas: 0, despesas: 0, saldo: 0 })
   const [categoryData, setCategoryData] = useState([])
   const [contas, setContas] = useState([])
+  const [insights, setInsights] = useState([])
   const [filters, setFilters] = useState({ tipo: '', categoria: '', conta: '', data_inicio: '', data_fim: '', busca: '' })
   const [buscaInput, setBuscaInput] = useState('')
   const [page, setPage] = useState(1)
@@ -57,11 +59,12 @@ export default function Dashboard() {
     try {
       const params = { ...buildFilterParams(), page, limit: PAGE_SIZE }
 
-      const [txRes, balanceRes, catRes, contasRes] = await Promise.all([
+      const [txRes, balanceRes, catRes, contasRes, insightsRes] = await Promise.all([
         api.get('/transactions', { params }),
         api.get('/reports/balance'),
         api.get('/reports/categories'),
         api.get('/contas'),
+        api.get('/reports/insights'),
       ])
 
       setTransactions(txRes.data.transactions)
@@ -73,6 +76,7 @@ export default function Dashboard() {
       setBalance(balanceRes.data)
       setCategoryData(catRes.data)
       setContas(contasRes.data)
+      setInsights(insightsRes.data)
     } catch (err) {
       console.error('Erro ao buscar dados:', err)
       setError('Não foi possível carregar seus dados. Verifique sua conexão e tente novamente.')
@@ -204,6 +208,8 @@ export default function Dashboard() {
         )}
 
         {loading ? <SkeletonCards /> : <SummaryCards balance={balance} />}
+
+        {!loading && <InsightsPanel insights={insights} />}
 
         <div className="dashboard-grid">
           <div className="transactions-section">

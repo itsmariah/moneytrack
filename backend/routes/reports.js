@@ -7,8 +7,11 @@ const {
   summarizeTransactions,
   getMonthDateRange,
   buildMonthlyEvolution,
+  currentMonthStr,
+  previousMonthStr,
 } = require('../utils/reportCalculations');
 const { serializeTransactions } = require('../utils/serializeTransaction');
+const { generateInsights } = require('../utils/generateInsights');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -114,6 +117,56 @@ router.get('/evolution', async (req, res) => {
     res.json(buildMonthlyEvolution(serializeTransactions(rawTransactions)));
   } catch (err) {
     res.status(500).json({ error: 'Erro ao buscar evolução' });
+  }
+});
+
+// Insights automáticos — compara categorias do mês atual com o anterior, cruza com
+// orçamentos e metas já cadastrados. Nenhum dado novo é guardado, tudo é derivado na hora.
+router.get('/insights', async (req, res) => {
+  try {
+    const mesAtual = currentMonthStr();
+    const mesAnterior = previousMonthStr(mesAtual);
+    const { start: startAtual, end: endAtual } = getMonthDateRange(mesAtual);
+    const { start: startAnterior, end: endAnterior } = getMonthDateRange(mesAnterior);
+
+    const [rowsAtual, rowsAnterior, orcamentos, metas] = await Promise.all([
+      prisma.transacao.groupBy({
+        by: ['categoria', 'tipo'],
+        where: { usuarioId: req.userId, data: { gte: startAtual, lte: endAtual } },
+        _sum: { valor: true },
+      }),
+      prisma.transacao.groupBy({
+        by: ['categoria', 'tipo'],
+        where: { usuarioId: req.userId, data: { gte: startAnterior, lte: endAnterior } },
+        _sum: { valor: true },
+      }),
+      prisma.orcamento.findMany({ where: { usuarioId: req.userId } }),
+      prisma.meta.findMany({ where: { usuarioId: req.userId }, include: { aportes: true } }),
+    ]);
+
+    const categoriasMesAtual = rowsAtual.map(r => ({ categoria: r.categoria, tipo: r.tipo, total: Number(r._sum.valor) }));
+    const categoriasMesAnterior = rowsAnterior.map(r => ({ categoria: r.categoria, tipo: r.tipo, total: Number(r._sum.valor) }));
+
+    const orcamentosComGasto = orcamentos.map(o => ({
+      categoria: o.categoria,
+      valorLimite: Number(o.valorLimite),
+      gasto: categoriasMesAtual.find(c => c.categoria === o.categoria && c.tipo === 'despesa')?.total || 0,
+    }));
+
+    const metasComProgresso = metas.map(m => {
+      const valorAtual = m.aportes.reduce((soma, a) => soma + Number(a.valor), 0);
+      const valorAlvo = Number(m.valorAlvo);
+      return { titulo: m.titulo, valorAtual, valorAlvo, concluida: valorAtual >= valorAlvo };
+    });
+
+    res.json(generateInsights({
+      categoriasMesAtual,
+      categoriasMesAnterior,
+      orcamentos: orcamentosComGasto,
+      metas: metasComProgresso,
+    }));
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao gerar insights' });
   }
 });
 
