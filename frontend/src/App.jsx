@@ -11,6 +11,7 @@ import Dashboard from './pages/Dashboard'
 import Reports from './pages/Reports'
 import Goals from './pages/Goals'
 import Budgets from './pages/Budgets'
+import Recurring from './pages/Recurring'
 
 export default function App() {
   return (
@@ -27,6 +28,7 @@ export default function App() {
             <Route path="/relatorios" element={<PrivateRoute><Reports /></PrivateRoute>} />
             <Route path="/metas" element={<PrivateRoute><Goals /></PrivateRoute>} />
             <Route path="/orcamentos" element={<PrivateRoute><Budgets /></PrivateRoute>} />
+            <Route path="/recorrencias" element={<PrivateRoute><Recurring /></PrivateRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>

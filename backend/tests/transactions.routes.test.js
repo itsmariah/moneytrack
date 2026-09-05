@@ -14,6 +14,9 @@ const token = makeToken(7);
 beforeEach(() => {
   // authMiddleware confere tokenVersion a cada requisição autenticada.
   vi.spyOn(prisma.usuario, 'findUnique').mockResolvedValue({ tokenVersion: 0 });
+  // GET / materializa recorrências vencidas antes de listar — sem recorrência ativa
+  // nenhuma, não deve gerar nada (ver describe dedicado mais abaixo).
+  vi.spyOn(prisma.recorrencia, 'findMany').mockResolvedValue([]);
 });
 
 afterEach(() => {
@@ -157,6 +160,24 @@ describe('POST /api/transactions/bulk', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.count).toBe(2);
+  });
+});
+
+describe('GET /api/transactions materializa recorrências vencidas', () => {
+  it('cria a transação em falta de uma recorrência ativa antes de listar', async () => {
+    vi.spyOn(prisma.recorrencia, 'findMany').mockResolvedValue([
+      { id: 1, usuarioId: 7, tipo: 'despesa', valor: new Prisma.Decimal('1200.00'), categoria: 'Moradia', descricao: 'Aluguel', diaDoMes: 1, dataInicio: '2020-01-01', dataFim: null, ativa: true },
+    ]);
+    const createManySpy = vi.spyOn(prisma.transacao, 'createMany').mockResolvedValue({ count: 1 });
+    // Primeira chamada: ensureOccurrences checando o que já existe. Segunda: listagem final da rota.
+    vi.spyOn(prisma.transacao, 'findMany').mockResolvedValueOnce([]).mockResolvedValue([]);
+    vi.spyOn(prisma.transacao, 'count').mockResolvedValue(0);
+
+    const res = await request(app).get('/api/transactions').set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(createManySpy).toHaveBeenCalled();
+    expect(createManySpy.mock.calls[0][0].data[0]).toMatchObject({ usuarioId: 7, categoria: 'Moradia', recorrenciaId: 1 });
   });
 });
 

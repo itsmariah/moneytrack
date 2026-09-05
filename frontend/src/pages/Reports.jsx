@@ -287,7 +287,10 @@ export default function Reports() {
                     <li key={t.id} className={`transaction-item ${t.tipo}`}>
                       <div className="tx-icon">{t.tipo === 'receita' ? '↑' : '↓'}</div>
                       <div className="tx-info">
-                        <span className="tx-desc">{t.descricao || t.categoria}</span>
+                        <span className="tx-desc">
+                          {t.recorrenciaId && <span title="Gerada automaticamente por uma recorrência">🔁 </span>}
+                          {t.descricao || t.categoria}
+                        </span>
                         <span className="tx-meta">{t.categoria} · {fmtDate(t.data)}</span>
                       </div>
                       <div className="tx-amount">

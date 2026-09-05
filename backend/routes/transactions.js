@@ -7,6 +7,7 @@ const { parsePagination, buildPaginationMeta } = require('../utils/pagination');
 const { serializeTransaction, serializeTransactions } = require('../utils/serializeTransaction');
 const { buildTransactionWhere } = require('../utils/buildTransactionWhere');
 const { buildTransactionsCsv } = require('../utils/csvExport');
+const { ensureOccurrences } = require('../utils/materializeRecorrencias');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -38,6 +39,11 @@ const bulkImportLimiter = rateLimit({
 router.get('/', async (req, res) => {
   try {
     const { tipo, categoria, data_inicio, data_fim, busca, page, limit } = req.query;
+
+    // Materializa aqui (não só na tela de recorrências) porque é a rota que o
+    // Dashboard chama sempre que a página abre — garante que ocorrências vencidas
+    // apareçam sem o usuário precisar visitar a tela de recorrências primeiro.
+    await ensureOccurrences(req.userId);
 
     const where = buildTransactionWhere(req.userId, { tipo, categoria, data_inicio, data_fim, busca });
     const { page: pageNum, limit: pageSize, skip } = parsePagination(page, limit);

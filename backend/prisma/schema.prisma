@@ -22,18 +22,43 @@ model Usuario {
   transacoes          Transacao[]
   metas               Meta[]
   orcamentos          Orcamento[]
+  recorrencias        Recorrencia[]
 }
 
 model Transacao {
-  id        Int      @id @default(autoincrement())
-  usuarioId Int
-  tipo      String
-  valor     Decimal  @db.Decimal(12, 2)
-  categoria String
-  descricao String   @default("")
-  data      String
-  createdAt DateTime @default(now())
-  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  id            Int          @id @default(autoincrement())
+  usuarioId     Int
+  tipo          String
+  valor         Decimal      @db.Decimal(12, 2)
+  categoria     String
+  descricao     String       @default("")
+  data          String
+  createdAt     DateTime     @default(now())
+  usuario       Usuario      @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  recorrenciaId Int?
+  // SetNull (não Cascade): apagar a regra de recorrência não deve apagar o histórico
+  // de transações já lançadas a partir dela.
+  recorrencia   Recorrencia? @relation(fields: [recorrenciaId], references: [id], onDelete: SetNull)
+}
+
+// Regra de recorrência mensal (aluguel, assinatura, salário...). As ocorrências não
+// nascem daqui direto — são materializadas como Transacao normais (ver
+// utils/materializeRecorrencias.js) sempre que o usuário acessa a tela de recorrências
+// ou a lista de transações, sem depender de nenhum job/cron rodando no servidor.
+model Recorrencia {
+  id          Int         @id @default(autoincrement())
+  usuarioId   Int
+  tipo        String
+  valor       Decimal     @db.Decimal(12, 2)
+  categoria   String
+  descricao   String      @default("")
+  diaDoMes    Int
+  dataInicio  String
+  dataFim     String?
+  ativa       Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  usuario     Usuario     @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  transacoes  Transacao[]
 }
 
 model Meta {
