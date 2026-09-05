@@ -98,7 +98,27 @@ export default function Landing() {
             <p>Adicione, edite e exclua receitas e despesas com categorias próprias para cada tipo.</p>
           </div>
           <div className="feature-card">
+            <div className="feature-icon">🎯</div>
+            <h3>Metas financeiras</h3>
+            <p>Defina uma meta com valor-alvo e prazo, registre aportes e acompanhe o progresso com histórico completo.</p>
+          </div>
+          <div className="feature-card">
+            <div className="feature-icon">📉</div>
+            <h3>Orçamento por categoria</h3>
+            <p>Estabeleça um limite mensal por categoria e veja o progresso mudar de cor conforme você se aproxima do teto.</p>
+          </div>
+          <div className="feature-card">
+            <div className="feature-icon">🔁</div>
+            <h3>Transações recorrentes</h3>
+            <p>Cadastre aluguel, assinaturas e salário uma vez só — o sistema lança os meses seguintes automaticamente.</p>
+          </div>
+          <div className="feature-card">
             <div className="feature-icon">🏦</div>
+            <h3>Múltiplas contas</h3>
+            <p>Separe o dinheiro em conta corrente, cartão ou carteira, com saldo próprio e transferência entre elas.</p>
+          </div>
+          <div className="feature-card">
+            <div className="feature-icon">📥</div>
             <h3>Importação de extratos (OFX)</h3>
             <p>Importe extratos bancários com pré-visualização e auto-categorização antes de confirmar.</p>
           </div>
