@@ -25,6 +25,7 @@ model Usuario {
   recorrencias        Recorrencia[]
   contas              Conta[]
   transferencias      Transferencia[]
+  conexoesBancarias   ConexaoBancaria[]
 }
 
 model Transacao {
@@ -43,6 +44,9 @@ model Transacao {
   recorrencia   Recorrencia? @relation(fields: [recorrenciaId], references: [id], onDelete: SetNull)
   contaId       Int
   conta         Conta        @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  // Preenchido só em transações vindas de sincronização Open Finance — usado pra nunca
+  // importar a mesma transação duas vezes num novo sync (upsert idempotente).
+  pluggyTransactionId String? @unique
 }
 
 // Conta/carteira do usuário (conta corrente, cartão, dinheiro em espécie...). saldoInicial
@@ -60,6 +64,28 @@ model Conta {
   transferenciasSaida    Transferencia[] @relation("TransferenciasSaida")
   transferenciasEntrada  Transferencia[] @relation("TransferenciasEntrada")
   recorrencias           Recorrencia[]
+  // Preenchidos só quando a conta nasceu de uma sincronização Open Finance (Pluggy).
+  // SetNull: apagar a conexão bancária não apaga a conta nem o histórico importado.
+  pluggyAccountId        String?         @unique
+  conexaoId              Int?
+  conexao                ConexaoBancaria? @relation(fields: [conexaoId], references: [id], onDelete: SetNull)
+}
+
+// Uma conexão com um banco via Open Finance (Pluggy). Uma conexão pode alimentar mais de
+// uma Conta local (ex: conta corrente + cartão de crédito do mesmo banco). Nenhum dado
+// bancário sensível (senha, token de acesso ao banco) é guardado aqui — só o identificador
+// do Item na Pluggy, que por si só não dá acesso a nada sem a API key do servidor.
+model ConexaoBancaria {
+  id                  Int      @id @default(autoincrement())
+  usuarioId           Int
+  pluggyItemId        String   @unique
+  nomeConector        String
+  status              String
+  erro                String?
+  ultimaSincronizacao DateTime?
+  createdAt           DateTime @default(now())
+  usuario             Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  contas              Conta[]
 }
 
 // Movimentação entre duas contas do mesmo usuário — nunca gera Transacao (não é receita

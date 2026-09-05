@@ -16,6 +16,7 @@ const orcamentosRoutes = require('./routes/orcamentos');
 const recorrenciasRoutes = require('./routes/recorrencias');
 const contasRoutes = require('./routes/contas');
 const transferenciasRoutes = require('./routes/transferencias');
+const openFinanceRoutes = require('./routes/openFinance');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -37,6 +38,7 @@ app.use('/api/orcamentos', orcamentosRoutes);
 app.use('/api/recorrencias', recorrenciasRoutes);
 app.use('/api/contas', contasRoutes);
 app.use('/api/transferencias', transferenciasRoutes);
+app.use('/api/open-finance', openFinanceRoutes);
 
 app.listen(PORT, () => {
   console.log(`MoneyTrack API rodando em http://localhost:${PORT}`);

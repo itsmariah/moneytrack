@@ -4,6 +4,8 @@ import Navbar from '../components/Navbar'
 import ContaModal from '../components/ContaModal'
 import ContaCard from '../components/ContaCard'
 import TransferModal from '../components/TransferModal'
+import ConectarBancoModal from '../components/ConectarBancoModal'
+import ConexaoBancariaCard from '../components/ConexaoBancariaCard'
 import ConfirmDialog from '../components/ConfirmDialog'
 import Alert from '../components/Alert'
 import { SkeletonList } from '../components/Skeleton'
@@ -12,14 +14,18 @@ import { fmt, fmtDate } from '../utils/format'
 export default function Contas() {
   const [contas, setContas] = useState([])
   const [transferencias, setTransferencias] = useState([])
+  const [conexoes, setConexoes] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
   const [showContaModal, setShowContaModal] = useState(false)
   const [editingConta, setEditingConta] = useState(null)
   const [showTransferModal, setShowTransferModal] = useState(false)
+  const [showConectarBanco, setShowConectarBanco] = useState(false)
+  const [sincronizandoId, setSincronizandoId] = useState(null)
   const [deleteConta, setDeleteConta] = useState(null)
   const [deleteTransferId, setDeleteTransferId] = useState(null)
+  const [deleteConexao, setDeleteConexao] = useState(null)
 
   useEffect(() => {
     if (!toast) return
@@ -30,12 +36,14 @@ export default function Contas() {
   const fetchData = useCallback(async () => {
     setError('')
     try {
-      const [contasRes, transfRes] = await Promise.all([
+      const [contasRes, transfRes, conexoesRes] = await Promise.all([
         api.get('/contas'),
         api.get('/transferencias'),
+        api.get('/open-finance/conexoes'),
       ])
       setContas(contasRes.data)
       setTransferencias(transfRes.data)
+      setConexoes(conexoesRes.data)
     } catch (err) {
       console.error('Erro ao buscar contas:', err)
       setError('Não foi possível carregar suas contas. Verifique sua conexão e tente novamente.')
@@ -93,6 +101,49 @@ export default function Contas() {
     }
   }
 
+  const handleBancoConectado = (resultado) => {
+    setShowConectarBanco(false)
+    if (resultado.aindaSincronizando) {
+      setToast('Banco conectado — a sincronização está demorando mais que o normal, confira em instantes.')
+    } else {
+      setToast(`Banco conectado! ${resultado.transacoesImportadas} transação(ões) importada(s).`)
+    }
+    fetchData()
+  }
+
+  const handleSincronizar = async (conexaoId) => {
+    setSincronizandoId(conexaoId)
+    try {
+      const { data } = await api.post(`/open-finance/conexoes/${conexaoId}/sincronizar`)
+      if (data.status === 'UPDATED') {
+        setToast(`Sincronizado! ${data.transacoesImportadas} transação(ões) nova(s).`)
+      } else if (data.status === 'LOGIN_ERROR' || data.status === 'OUTDATED') {
+        setToast('A sincronização falhou — pode ser necessário reconectar o banco.')
+      } else {
+        setToast('O banco ainda está processando. Tente de novo em alguns instantes.')
+      }
+      fetchData()
+    } catch (err) {
+      console.error(err)
+      setError('Não foi possível sincronizar. Tente novamente.')
+    } finally {
+      setSincronizandoId(null)
+    }
+  }
+
+  const confirmDeleteConexao = async () => {
+    const conexao = deleteConexao
+    setDeleteConexao(null)
+    try {
+      await api.delete(`/open-finance/conexoes/${conexao.id}`)
+      setToast('Conexão removida.')
+      fetchData()
+    } catch (err) {
+      console.error(err)
+      setError('Não foi possível remover a conexão. Tente novamente.')
+    }
+  }
+
   return (
     <div className="app-layout">
       <Navbar />
@@ -105,6 +156,9 @@ export default function Contas() {
                 ⇄ Transferir
               </button>
             )}
+            <button className="btn btn-outline" onClick={() => setShowConectarBanco(true)}>
+              🏦 Conectar banco
+            </button>
             <button className="btn btn-primary" onClick={() => setShowContaModal(true)}>
               + Nova conta
             </button>
@@ -132,6 +186,23 @@ export default function Contas() {
                 />
               ))}
             </div>
+
+            {conexoes.length > 0 && (
+              <div style={{ marginTop: 24 }}>
+                <h3 style={{ marginBottom: 12 }}>Conexões bancárias</h3>
+                <div className="goals-grid">
+                  {conexoes.map(conexao => (
+                    <ConexaoBancariaCard
+                      key={conexao.id}
+                      conexao={conexao}
+                      onSincronizar={handleSincronizar}
+                      onDelete={setDeleteConexao}
+                      sincronizando={sincronizandoId === conexao.id}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
 
             {transferencias.length > 0 && (
               <div className="transactions-section" style={{ marginTop: 24 }}>
@@ -175,6 +246,13 @@ export default function Contas() {
         />
       )}
 
+      {showConectarBanco && (
+        <ConectarBancoModal
+          onClose={() => setShowConectarBanco(false)}
+          onConnected={handleBancoConectado}
+        />
+      )}
+
       {deleteConta && (
         <ConfirmDialog
           title="Excluir conta"
@@ -192,6 +270,16 @@ export default function Contas() {
           confirmLabel="Desfazer"
           onConfirm={confirmDeleteTransfer}
           onCancel={() => setDeleteTransferId(null)}
+        />
+      )}
+
+      {deleteConexao && (
+        <ConfirmDialog
+          title="Remover conexão bancária"
+          message={`Tem certeza que deseja remover a conexão com "${deleteConexao.nomeConector}"? As contas e transações já importadas continuam no seu histórico, mas nenhuma nova sincronização vai acontecer.`}
+          confirmLabel="Remover"
+          onConfirm={confirmDeleteConexao}
+          onCancel={() => setDeleteConexao(null)}
         />
       )}
 
