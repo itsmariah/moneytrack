@@ -541,6 +541,34 @@ input[type="month"]::-webkit-calendar-picker-indicator { filter: var(--picker-in
 .empty-state-sub { font-size: 13px; margin-top: 6px; }
 .empty-chart { text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: 14px; }
 
+/* ── METAS ── */
+.goals-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.meta-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+.meta-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+.meta-card--concluida { border-color: var(--green); }
+.meta-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 14px; }
+.meta-card-header h3 { font-size: 16px; font-weight: 600; }
+.meta-progress-bar { background: var(--bg3); border-radius: 999px; height: 10px; overflow: hidden; }
+.meta-progress-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--primary-light), #a78bfa); transition: width 0.4s ease; }
+.meta-card--concluida .meta-progress-fill { background: var(--green); }
+.meta-progress-info { display: flex; justify-content: space-between; align-items: baseline; margin-top: 8px; font-size: 13px; }
+.meta-progress-pct { font-weight: 700; }
+.meta-card-status { margin-top: 6px; font-size: 13px; color: var(--text-muted); }
+.meta-badge--done { color: var(--green); font-weight: 600; }
+.meta-card-actions { display: flex; align-items: center; gap: 14px; margin-top: 16px; }
+.btn-link { background: none; border: none; padding: 0; color: var(--primary-light); font-size: 13px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.btn-link:hover { color: var(--primary); }
+.meta-aportes-list { list-style: none; display: flex; flex-direction: column; gap: 6px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+.meta-aportes-list li { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.meta-aporte-info { flex: 1; min-width: 0; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.meta-aporte-valor { font-weight: 600; color: var(--green); white-space: nowrap; }
+
 /* ── MODAL ── */
 .modal-overlay {
   position: fixed;

@@ -11,6 +11,7 @@ const helmet = require('helmet');
 const authRoutes = require('./routes/auth');
 const transactionRoutes = require('./routes/transactions');
 const reportsRoutes = require('./routes/reports');
+const metasRoutes = require('./routes/metas');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -27,6 +28,7 @@ app.use(express.json({ limit: '5mb' }));
 app.use('/api/auth', authRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/metas', metasRoutes);
 
 app.listen(PORT, () => {
   console.log(`MoneyTrack API rodando em http://localhost:${PORT}`);

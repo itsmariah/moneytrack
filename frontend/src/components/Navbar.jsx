@@ -20,6 +20,7 @@ export default function Navbar() {
       <nav className="navbar-nav">
         <Link to="/dashboard" className={isActive('/dashboard')}>Dashboard</Link>
         <Link to="/relatorios" className={isActive('/relatorios')}>Relatórios</Link>
+        <Link to="/metas" className={isActive('/metas')}>Metas</Link>
       </nav>
 
       <div className="navbar-user">

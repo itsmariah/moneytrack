@@ -20,6 +20,7 @@ model Usuario {
   tokenVersion        Int         @default(0)
   createdAt           DateTime    @default(now())
   transacoes          Transacao[]
+  metas               Meta[]
 }
 
 model Transacao {
@@ -32,4 +33,27 @@ model Transacao {
   data      String
   createdAt DateTime @default(now())
   usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+}
+
+model Meta {
+  id        Int      @id @default(autoincrement())
+  usuarioId Int
+  titulo    String
+  valorAlvo Decimal  @db.Decimal(12, 2)
+  prazo     String?
+  createdAt DateTime @default(now())
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  aportes   Aporte[]
+}
+
+// Contribuições registradas manualmente pelo usuário — valorAtual de uma Meta é sempre
+// a soma dos aportes, nunca um campo redundante na Meta (evita os dois ficarem dessincronizados).
+model Aporte {
+  id        Int      @id @default(autoincrement())
+  metaId    Int
+  valor     Decimal  @db.Decimal(12, 2)
+  data      String
+  descricao String   @default("")
+  createdAt DateTime @default(now())
+  meta      Meta     @relation(fields: [metaId], references: [id], onDelete: Cascade)
 }

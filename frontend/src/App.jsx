@@ -9,6 +9,7 @@ import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 import Dashboard from './pages/Dashboard'
 import Reports from './pages/Reports'
+import Goals from './pages/Goals'
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
             <Route path="/redefinir-senha" element={<ResetPassword />} />
             <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
             <Route path="/relatorios" element={<PrivateRoute><Reports /></PrivateRoute>} />
+            <Route path="/metas" element={<PrivateRoute><Goals /></PrivateRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
