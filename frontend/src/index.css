@@ -569,6 +569,23 @@ input[type="month"]::-webkit-calendar-picker-indicator { filter: var(--picker-in
 .meta-aporte-info { flex: 1; min-width: 0; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .meta-aporte-valor { font-weight: 600; color: var(--green); white-space: nowrap; }
 
+/* ── ORÇAMENTOS ── */
+.budget-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+.budget-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+.budget-card--warn { border-color: var(--yellow); }
+.budget-card--over { border-color: var(--red); }
+.budget-progress-fill { height: 100%; border-radius: 999px; transition: width 0.4s ease; }
+.budget-progress-fill--ok { background: linear-gradient(90deg, var(--primary-light), #a78bfa); }
+.budget-progress-fill--warn { background: var(--yellow); }
+.budget-progress-fill--over { background: var(--red); }
+.budget-badge--over { color: var(--red); font-weight: 600; }
+
 /* ── MODAL ── */
 .modal-overlay {
   position: fixed;

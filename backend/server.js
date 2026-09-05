@@ -12,6 +12,7 @@ const authRoutes = require('./routes/auth');
 const transactionRoutes = require('./routes/transactions');
 const reportsRoutes = require('./routes/reports');
 const metasRoutes = require('./routes/metas');
+const orcamentosRoutes = require('./routes/orcamentos');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -29,6 +30,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/metas', metasRoutes);
+app.use('/api/orcamentos', orcamentosRoutes);
 
 app.listen(PORT, () => {
   console.log(`MoneyTrack API rodando em http://localhost:${PORT}`);

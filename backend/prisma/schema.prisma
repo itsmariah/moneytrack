@@ -21,6 +21,7 @@ model Usuario {
   createdAt           DateTime    @default(now())
   transacoes          Transacao[]
   metas               Meta[]
+  orcamentos          Orcamento[]
 }
 
 model Transacao {
@@ -56,4 +57,18 @@ model Aporte {
   descricao String   @default("")
   createdAt DateTime @default(now())
   meta      Meta     @relation(fields: [metaId], references: [id], onDelete: Cascade)
+}
+
+// Limite mensal fixo por categoria — vale todo mês até o usuário editar (não é um
+// registro por mês). O gasto do mês é sempre calculado a partir das Transacoes, nunca
+// guardado aqui.
+model Orcamento {
+  id          Int      @id @default(autoincrement())
+  usuarioId   Int
+  categoria   String
+  valorLimite Decimal  @db.Decimal(12, 2)
+  createdAt   DateTime @default(now())
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([usuarioId, categoria])
 }
