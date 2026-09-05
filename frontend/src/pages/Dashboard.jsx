@@ -8,6 +8,7 @@ import TransactionList from '../components/TransactionList'
 import ExpensePieChart from '../components/charts/ExpensePieChart'
 import OFXImportModal from '../components/OFXImportModal'
 import InsightsPanel from '../components/InsightsPanel'
+import ProjectionCard from '../components/ProjectionCard'
 import ConfirmDialog from '../components/ConfirmDialog'
 import Alert from '../components/Alert'
 import { SkeletonCards, SkeletonList, SkeletonChart } from '../components/Skeleton'
@@ -23,6 +24,7 @@ export default function Dashboard() {
   const [categoryData, setCategoryData] = useState([])
   const [contas, setContas] = useState([])
   const [insights, setInsights] = useState([])
+  const [projecao, setProjecao] = useState(null)
   const [filters, setFilters] = useState({ tipo: '', categoria: '', conta: '', data_inicio: '', data_fim: '', busca: '' })
   const [buscaInput, setBuscaInput] = useState('')
   const [page, setPage] = useState(1)
@@ -59,12 +61,13 @@ export default function Dashboard() {
     try {
       const params = { ...buildFilterParams(), page, limit: PAGE_SIZE }
 
-      const [txRes, balanceRes, catRes, contasRes, insightsRes] = await Promise.all([
+      const [txRes, balanceRes, catRes, contasRes, insightsRes, projecaoRes] = await Promise.all([
         api.get('/transactions', { params }),
         api.get('/reports/balance'),
         api.get('/reports/categories'),
         api.get('/contas'),
         api.get('/reports/insights'),
+        api.get('/reports/projecao'),
       ])
 
       setTransactions(txRes.data.transactions)
@@ -77,6 +80,7 @@ export default function Dashboard() {
       setCategoryData(catRes.data)
       setContas(contasRes.data)
       setInsights(insightsRes.data)
+      setProjecao(projecaoRes.data)
     } catch (err) {
       console.error('Erro ao buscar dados:', err)
       setError('Não foi possível carregar seus dados. Verifique sua conexão e tente novamente.')
@@ -208,6 +212,8 @@ export default function Dashboard() {
         )}
 
         {loading ? <SkeletonCards /> : <SummaryCards balance={balance} />}
+
+        {!loading && <ProjectionCard projecao={projecao} />}
 
         {!loading && <InsightsPanel insights={insights} />}
 

@@ -12,6 +12,8 @@ const {
 } = require('../utils/reportCalculations');
 const { serializeTransactions } = require('../utils/serializeTransaction');
 const { generateInsights } = require('../utils/generateInsights');
+const { futureOccurrenceThisMonth, projectBalance } = require('../utils/projectBalance');
+const { ensureOccurrences } = require('../utils/materializeRecorrencias');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -167,6 +169,57 @@ router.get('/insights', async (req, res) => {
     }));
   } catch (err) {
     res.status(500).json({ error: 'Erro ao gerar insights' });
+  }
+});
+
+// Projeção de saldo até o fim do mês — combina o que ainda deve acontecer com certeza
+// (recorrências futuras) com uma estimativa de gasto avulso baseada no ritmo do mês até
+// hoje. Nada disso é guardado, é recalculado a cada chamada.
+router.get('/projecao', async (req, res) => {
+  try {
+    // Materializa antes de projetar — sem isso, uma recorrência já vencida hoje entraria
+    // duas vezes: uma como "recorrência futura" e outra quando finalmente fosse gerada.
+    await ensureOccurrences(req.userId);
+
+    const hoje = new Date();
+    const ano = hoje.getFullYear();
+    const mes = hoje.getMonth() + 1;
+    const diaAtual = hoje.getDate();
+    const mesStr = `${ano}-${String(mes).padStart(2, '0')}`;
+    const hojeStr = `${mesStr}-${String(diaAtual).padStart(2, '0')}`;
+    const { start, end } = getMonthDateRange(mesStr);
+    const totalDiasNoMes = Number(end.slice(-2));
+
+    const [balanceRows, contas, despesasNaoRecAgg, recorrencias] = await Promise.all([
+      prisma.transacao.groupBy({ by: ['tipo'], where: { usuarioId: req.userId }, _sum: { valor: true } }),
+      prisma.conta.findMany({ where: { usuarioId: req.userId }, select: { saldoInicial: true } }),
+      prisma.transacao.aggregate({
+        where: { usuarioId: req.userId, tipo: 'despesa', recorrenciaId: null, data: { gte: start, lte: hojeStr } },
+        _sum: { valor: true },
+      }),
+      prisma.recorrencia.findMany({ where: { usuarioId: req.userId, ativa: true } }),
+    ]);
+
+    const normalized = balanceRows.map(r => ({ tipo: r.tipo, _sum: { valor: Number(r._sum.valor) } }));
+    const saldoInicialTotal = contas.reduce((soma, c) => soma + Number(c.saldoInicial), 0);
+    const { saldo: saldoAtual } = calculateBalance(normalized, saldoInicialTotal);
+
+    const despesasNaoRecorrentesAteHoje = Number(despesasNaoRecAgg._sum.valor || 0);
+    const recorrenciasFuturas = recorrencias
+      .map(r => futureOccurrenceThisMonth(r, { ano, mes, hojeStr }))
+      .filter(Boolean);
+
+    const resultado = projectBalance({
+      saldoAtual,
+      diaAtual,
+      totalDiasNoMes,
+      despesasNaoRecorrentesAteHoje,
+      recorrenciasFuturas,
+    });
+
+    res.json({ ...resultado, mes: mesStr, fimDoMes: end });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao calcular projeção de saldo' });
   }
 });
 

@@ -139,6 +139,57 @@ describe('GET /api/reports/insights', () => {
   });
 });
 
+describe('GET /api/reports/projecao', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-10T12:00:00')); // dia 10 de agosto (31 dias), pra teste determinístico
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('retorna 401 sem token', async () => {
+    vi.useRealTimers();
+    const res = await request(app).get('/api/reports/projecao');
+    expect(res.status).toBe(401);
+  });
+
+  it('projeta o saldo combinando o saldo atual, recorrências futuras e o ritmo de gastos', async () => {
+    vi.spyOn(prisma.transacao, 'groupBy').mockResolvedValue([
+      { tipo: 'receita', _sum: { valor: new Prisma.Decimal('5000.00') } },
+      { tipo: 'despesa', _sum: { valor: new Prisma.Decimal('1000.00') } },
+    ]);
+    vi.spyOn(prisma.conta, 'findMany').mockResolvedValue([{ saldoInicial: new Prisma.Decimal('0.00') }]);
+    vi.spyOn(prisma.transacao, 'aggregate').mockResolvedValue({ _sum: { valor: new Prisma.Decimal('300.00') } });
+    // dataInicio em agosto (o próprio mês corrente) faz o ensureOccurrences não achar
+    // nenhuma ocorrência passada pra materializar (evita mockar transacao.findMany/createMany
+    // aqui) — dia 20 ainda não chegou (hoje é dia 10), então conta como recorrência futura.
+    vi.spyOn(prisma.recorrencia, 'findMany').mockResolvedValue([
+      { tipo: 'despesa', valor: new Prisma.Decimal('1200.00'), diaDoMes: 20, dataInicio: '2026-08-01', dataFim: null },
+    ]);
+
+    const res = await request(app).get('/api/reports/projecao').set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.saldoAtual).toBe(4000); // 5000 receitas - 1000 despesas
+    expect(res.body.despesasRecorrentesFuturas).toBe(1200);
+    expect(res.body.mes).toBe('2026-08');
+  });
+
+  it('escopa a agregação de gastos não recorrentes por usuarioId do token', async () => {
+    vi.spyOn(prisma.transacao, 'groupBy').mockResolvedValue([]);
+    vi.spyOn(prisma.conta, 'findMany').mockResolvedValue([]);
+    const aggSpy = vi.spyOn(prisma.transacao, 'aggregate').mockResolvedValue({ _sum: { valor: null } });
+    vi.spyOn(prisma.recorrencia, 'findMany').mockResolvedValue([]);
+
+    await request(app).get('/api/reports/projecao?usuarioId=999').set('Authorization', `Bearer ${token}`);
+
+    expect(aggSpy.mock.calls[0][0].where.usuarioId).toBe(7);
+    expect(aggSpy.mock.calls[0][0].where.recorrenciaId).toBeNull();
+  });
+});
+
 describe('GET /api/reports/evolution', () => {
   it('agrupa por mês somando receitas e despesas separadamente (200)', async () => {
     vi.spyOn(prisma.transacao, 'findMany').mockResolvedValue([

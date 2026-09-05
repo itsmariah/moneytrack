@@ -488,6 +488,20 @@ input[type="month"]::-webkit-calendar-picker-indicator { filter: var(--picker-in
 .positive { color: var(--green); }
 .negative { color: var(--red); }
 
+/* ── PROJEÇÃO DE SALDO ── */
+.projection-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 22px;
+  margin-bottom: 24px;
+}
+.projection-main { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; }
+.projection-label { font-size: 13px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+.projection-days { text-transform: none; font-weight: 400; letter-spacing: normal; }
+.projection-value { font-size: 24px; font-weight: 700; }
+.projection-breakdown { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 8px; font-size: 13px; color: var(--text-muted); }
+
 /* ── INSIGHTS ── */
 .insights-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
 .insight-card {

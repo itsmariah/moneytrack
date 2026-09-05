@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -32,6 +32,10 @@ export default function Reports() {
   const [error, setError] = useState('')
   const [tipoFilter, setTipoFilter] = useState('todos')
   const [categoriaFilter, setCategoriaFilter] = useState('todas')
+  const [generatingPdf, setGeneratingPdf] = useState(false)
+  const evolutionRef = useRef(null)
+  const despesasChartRef = useRef(null)
+  const receitasChartRef = useRef(null)
 
   useEffect(() => { fetchReport() }, [month])
 
@@ -112,18 +116,44 @@ export default function Reports() {
 
   const isFiltered = tipoFilter !== 'todos' || categoriaFilter !== 'todas'
 
+  const handleDownloadPdf = async () => {
+    setGeneratingPdf(true)
+    setError('')
+    try {
+      // Import dinâmico: jsPDF + html2canvas só entram no bundle de quem realmente
+      // clica em "Baixar PDF", em vez de pesarem no carregamento inicial de todo mundo.
+      const { generateReportPdf } = await import('../utils/generateReportPdf')
+      await generateReportPdf({
+        month,
+        summary,
+        transactions: filtered,
+        chartRefs: { evolution: evolutionRef, despesas: despesasChartRef, receitas: receitasChartRef },
+      })
+    } catch (err) {
+      console.error(err)
+      setError('Não foi possível gerar o PDF. Tente novamente.')
+    } finally {
+      setGeneratingPdf(false)
+    }
+  }
+
   return (
     <div className="app-layout">
       <Navbar />
       <main className="main-content">
         <div className="dashboard-header">
           <h2>Relatórios</h2>
-          <input
-            type="month"
-            value={month}
-            onChange={e => setMonth(e.target.value)}
-            className="month-picker"
-          />
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input
+              type="month"
+              value={month}
+              onChange={e => setMonth(e.target.value)}
+              className="month-picker"
+            />
+            <button className="btn btn-outline" onClick={handleDownloadPdf} disabled={generatingPdf || loading || !report}>
+              {generatingPdf ? 'Gerando PDF...' : '📄 Baixar PDF'}
+            </button>
+          </div>
         </div>
 
         <div className="reports-filters">
@@ -196,7 +226,7 @@ export default function Reports() {
             <SummaryCards balance={summary} />
 
             {/* Evolução — full width */}
-            <div className="chart-section" style={{ marginBottom: 24 }}>
+            <div className="chart-section" style={{ marginBottom: 24 }} ref={evolutionRef}>
               <h3>Evolução dos Últimos 6 Meses</h3>
               {evolutionData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={260}>
@@ -220,7 +250,7 @@ export default function Reports() {
 
             {/* Dois pies lado a lado */}
             <div className="reports-charts">
-              <div className="chart-section">
+              <div className="chart-section" ref={despesasChartRef}>
                 <h3>
                   Despesas por Categoria
                   {categoriaFilter !== 'todas' && (
@@ -232,7 +262,7 @@ export default function Reports() {
                 <ExpensePieChart data={pieDataDespesas} emptyMessage="Nenhuma despesa neste período" />
               </div>
 
-              <div className="chart-section">
+              <div className="chart-section" ref={receitasChartRef}>
                 <h3>
                   Fontes de Renda
                   {categoriaFilter !== 'todas' && (
