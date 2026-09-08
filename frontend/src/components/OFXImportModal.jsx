@@ -1,14 +1,15 @@
 import { useState, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { readOFXFile, parseOFX } from '../utils/ofxParser'
-import { TODAS_CATEGORIAS } from '../utils/categories'
 import { fmt } from '../utils/format'
 import api from '../services/api'
+import { useCategorias } from '../context/CategoriasContext'
 import Modal from './Modal'
 import Alert from './Alert'
 
 export default function OFXImportModal({ contas, onClose, onImported }) {
   const navigate = useNavigate()
+  const { todasCategorias } = useCategorias()
   const [step, setStep]               = useState('upload') // upload | preview | done
   const [transactions, setTransactions] = useState([])
   const [contaId, setContaId]         = useState(contas?.[0]?.id || '')
@@ -161,7 +162,7 @@ export default function OFXImportModal({ contas, onClose, onImported }) {
                       <td className="ofx-desc" title={t.descricao}>{t.descricao}</td>
                       <td>
                         <select className="ofx-cat-select" value={t.categoria} onChange={e => setcat(t._key, e.target.value)}>
-                          {TODAS_CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
+                          {todasCategorias.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
                         {t.categoria === 'Outros' && (
                           <input

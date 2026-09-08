@@ -26,6 +26,24 @@ model Usuario {
   contas              Conta[]
   transferencias      Transferencia[]
   conexoesBancarias   ConexaoBancaria[]
+  categorias          Categoria[]
+}
+
+// Metadados de exibição (ícone/cor) por categoria — de propósito NÃO é uma foreign key
+// de Transacao/Recorrencia/Orcamento, que continuam guardando categoria como texto livre
+// (como sempre foi). Isso evita qualquer migração/backfill em cima de dados reais: uma
+// categoria sem linha correspondente aqui simplesmente cai num ícone/cor padrão.
+model Categoria {
+  id        Int      @id @default(autoincrement())
+  usuarioId Int
+  nome      String
+  tipo      String
+  icone     String   @default("💰")
+  cor       String   @default("#6366f1")
+  createdAt DateTime @default(now())
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([usuarioId, nome, tipo])
 }
 
 model Transacao {

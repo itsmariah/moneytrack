@@ -12,13 +12,13 @@ import ProjectionCard from '../components/ProjectionCard'
 import ConfirmDialog from '../components/ConfirmDialog'
 import Alert from '../components/Alert'
 import { SkeletonCards, SkeletonList, SkeletonChart } from '../components/Skeleton'
-
-import { TODAS_CATEGORIAS } from '../utils/categories'
+import { useCategorias } from '../context/CategoriasContext'
 
 const PAGE_SIZE = 50
 
 export default function Dashboard() {
   const { user } = useAuth()
+  const { todasCategorias } = useCategorias()
   const [transactions, setTransactions] = useState([])
   const [balance, setBalance] = useState({ receitas: 0, despesas: 0, saldo: 0 })
   const [categoryData, setCategoryData] = useState([])
@@ -237,7 +237,7 @@ export default function Dashboard() {
                 </select>
                 <select value={filters.categoria} onChange={e => updateFilters({ categoria: e.target.value })}>
                   <option value="">Todas as categorias</option>
-                  {TODAS_CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
+                  {todasCategorias.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
                 {contas.length > 1 && (
                   <select value={filters.conta} onChange={e => updateFilters({ conta: e.target.value })}>

@@ -24,6 +24,7 @@ export default function Navbar() {
         <Link to="/metas" className={isActive('/metas')}>Metas</Link>
         <Link to="/orcamentos" className={isActive('/orcamentos')}>Orçamentos</Link>
         <Link to="/recorrencias" className={isActive('/recorrencias')}>Recorrências</Link>
+        <Link to="/categorias" className={isActive('/categorias')}>Categorias</Link>
       </nav>
 
       <div className="navbar-user">

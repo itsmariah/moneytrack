@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import api from '../services/api'
-import { CATEGORIAS_DESPESA } from '../utils/categories'
+import { useCategorias } from '../context/CategoriasContext'
 import Modal from './Modal'
 import Alert from './Alert'
 
 export default function BudgetModal({ orcamento, existingCategorias, onClose, onSaved }) {
-  const disponiveis = CATEGORIAS_DESPESA.filter(
+  const { categoriasDespesa } = useCategorias()
+  const disponiveis = categoriasDespesa.filter(
     c => c === orcamento?.categoria || !existingCategorias.includes(c)
   )
   const [form, setForm] = useState({

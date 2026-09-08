@@ -6,7 +6,7 @@ import BudgetCard from '../components/BudgetCard'
 import ConfirmDialog from '../components/ConfirmDialog'
 import Alert from '../components/Alert'
 import { SkeletonList } from '../components/Skeleton'
-import { CATEGORIAS_DESPESA } from '../utils/categories'
+import { useCategorias } from '../context/CategoriasContext'
 
 // new Date().toISOString() é UTC — perto da virada do mês no Brasil (UTC-3) isso pode
 // adiantar o mês padrão exibido. Aqui montamos o mês local manualmente para evitar isso.
@@ -16,6 +16,7 @@ function currentMonthLocal() {
 }
 
 export default function Budgets() {
+  const { categoriasDespesa } = useCategorias()
   const [month, setMonth] = useState(currentMonthLocal())
   const [orcamentos, setOrcamentos] = useState([])
   const [loading, setLoading] = useState(true)
@@ -75,7 +76,7 @@ export default function Budgets() {
     }
   }
 
-  const semCategoriaDisponivel = orcamentos.length >= CATEGORIAS_DESPESA.length
+  const semCategoriaDisponivel = orcamentos.length >= categoriasDespesa.length
 
   return (
     <div className="app-layout">

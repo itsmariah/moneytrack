@@ -8,6 +8,7 @@ const recorrenciasRoutes = require('../routes/recorrencias');
 const contasRoutes = require('../routes/contas');
 const transferenciasRoutes = require('../routes/transferencias');
 const openFinanceRoutes = require('../routes/openFinance');
+const categoriasRoutes = require('../routes/categorias');
 
 // Réplica mínima da montagem de rotas do server.js, sem helmet/cors/app.listen —
 // os testes de integração só precisam do roteamento + middlewares de cada router.
@@ -23,6 +24,7 @@ function createTestApp() {
   app.use('/api/contas', contasRoutes);
   app.use('/api/transferencias', transferenciasRoutes);
   app.use('/api/open-finance', openFinanceRoutes);
+  app.use('/api/categorias', categoriasRoutes);
   return app;
 }
 

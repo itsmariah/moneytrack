@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import api from '../services/api'
-import { categoriasPorTipo } from '../utils/categories'
+import { useCategorias } from '../context/CategoriasContext'
 import Modal from './Modal'
 import Alert from './Alert'
 
@@ -14,6 +14,7 @@ function todayLocal() {
 }
 
 export default function TransactionModal({ transaction, contas, onClose, onSaved }) {
+  const { categoriasPorTipo } = useCategorias()
   const [form, setForm] = useState({
     tipo: 'despesa',
     valor: '',

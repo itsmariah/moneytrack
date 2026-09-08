@@ -645,6 +645,25 @@ input[type="month"]::-webkit-calendar-picker-indicator { filter: var(--picker-in
 .recurring-badge--pausada { background: var(--bg3); color: var(--text-muted); }
 .recurring-badge--erro { background: rgba(239,68,68,0.15); color: var(--red); }
 
+/* ── CATEGORIAS ── */
+.categoria-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.categoria-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--categoria-cor, var(--primary));
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.categoria-chip:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.categoria-chip-icone { font-size: 20px; line-height: 1; }
+.categoria-chip-nome { flex: 1; font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.categoria-chip-actions { display: flex; gap: 2px; }
+.color-input { width: 44px; height: 36px; padding: 2px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg2); cursor: pointer; }
+
 /* ── CONTAS ── */
 .conta-card {
   background: var(--bg2);
