@@ -15,9 +15,9 @@ const { notifyOrcamentoEstouradoSeNecessario } = require('../utils/notifyOrcamen
 
 // Fire-and-forget (mesmo padrão do e-mail de reset de senha em auth.js): a resposta da
 // rota não deve esperar o envio de e-mail, e uma falha aqui não pode derrubar a requisição.
-function dispararAvisoOrcamentoSeDespesa(usuarioId, transacao) {
+function dispararAvisoOrcamentoSeDespesa(familiaId, transacao) {
   if (transacao.tipo !== 'despesa') return;
-  notifyOrcamentoEstouradoSeNecessario(usuarioId, transacao.categoria, transacao.data).catch(err => {
+  notifyOrcamentoEstouradoSeNecessario(familiaId, transacao.categoria, transacao.data).catch(err => {
     console.error('Erro ao verificar orçamento estourado:', err.message);
   });
 }
@@ -27,11 +27,12 @@ router.use(authMiddleware);
 
 const MAX_BULK_ITEMS = 500;
 
-// Confere que a conta existe e pertence ao usuário do token (evita atribuir uma
-// transação a uma conta de outro usuário via IDOR).
-async function contaPertenceAoUsuario(usuarioId, contaId) {
+// Confere que a conta existe e pertence à família do token (evita atribuir uma
+// transação a uma conta de outra família via IDOR) — qualquer membro pode usar qualquer
+// conta da própria família.
+async function contaPertenceAFamilia(familiaId, contaId) {
   if (!contaId) return false;
-  const conta = await prisma.conta.findFirst({ where: { id: Number(contaId), usuarioId } });
+  const conta = await prisma.conta.findFirst({ where: { id: Number(contaId), familiaId } });
   return Boolean(conta);
 }
 
@@ -64,9 +65,9 @@ router.get('/', async (req, res) => {
     // Materializa aqui (não só na tela de recorrências) porque é a rota que o
     // Dashboard chama sempre que a página abre — garante que ocorrências vencidas
     // apareçam sem o usuário precisar visitar a tela de recorrências primeiro.
-    await ensureOccurrences(req.userId);
+    await ensureOccurrences(req.familiaId);
 
-    const where = buildTransactionWhere(req.userId, { tipo, categoria, contaId: conta, data_inicio, data_fim, busca });
+    const where = buildTransactionWhere(req.familiaId, { tipo, categoria, contaId: conta, data_inicio, data_fim, busca });
     const { page: pageNum, limit: pageSize, skip } = parsePagination(page, limit);
 
     const [rawTransactions, total] = await Promise.all([
@@ -90,7 +91,7 @@ router.get('/', async (req, res) => {
 router.get('/export', async (req, res) => {
   try {
     const { tipo, categoria, conta, data_inicio, data_fim, busca } = req.query;
-    const where = buildTransactionWhere(req.userId, { tipo, categoria, contaId: conta, data_inicio, data_fim, busca });
+    const where = buildTransactionWhere(req.familiaId, { tipo, categoria, contaId: conta, data_inicio, data_fim, busca });
 
     const rawTransactions = await prisma.transacao.findMany({
       where,
@@ -117,7 +118,7 @@ router.post('/bulk', bulkImportLimiter, async (req, res) => {
     if (transactions.length > MAX_BULK_ITEMS) {
       return res.status(400).json({ error: `Máximo de ${MAX_BULK_ITEMS} transações por importação` });
     }
-    if (!(await contaPertenceAoUsuario(req.userId, contaId))) {
+    if (!(await contaPertenceAFamilia(req.familiaId, contaId))) {
       return res.status(400).json({ error: 'Conta inválida' });
     }
     for (const t of transactions) {
@@ -127,6 +128,7 @@ router.post('/bulk', bulkImportLimiter, async (req, res) => {
     const created = await prisma.transacao.createMany({
       data: transactions.map(t => ({
         usuarioId: req.userId,
+        familiaId: req.familiaId,
         contaId: Number(contaId),
         tipo: t.tipo,
         valor: Number(t.valor),
@@ -148,13 +150,14 @@ router.post('/', async (req, res) => {
 
     const validationError = validateTransactionInput(req.body) || validateAnexoInput(req.body);
     if (validationError) return res.status(400).json({ error: validationError });
-    if (!(await contaPertenceAoUsuario(req.userId, contaId))) {
+    if (!(await contaPertenceAFamilia(req.familiaId, contaId))) {
       return res.status(400).json({ error: 'Conta inválida' });
     }
 
     const created = await prisma.transacao.create({
       data: {
         usuarioId: req.userId,
+        familiaId: req.familiaId,
         contaId: Number(contaId),
         tipo,
         valor: Number(valor),
@@ -166,7 +169,7 @@ router.post('/', async (req, res) => {
       },
       select: TRANSACAO_SELECT_SEM_ANEXO,
     });
-    dispararAvisoOrcamentoSeDespesa(req.userId, created);
+    dispararAvisoOrcamentoSeDespesa(req.familiaId, created);
     res.status(201).json(serializeTransaction(created));
   } catch (err) {
     res.status(500).json({ error: 'Erro ao criar transação' });
@@ -179,12 +182,12 @@ router.put('/:id', async (req, res) => {
     const id = Number(req.params.id);
     const { tipo, valor, categoria, descricao, data, contaId, anexo, anexoNome } = req.body;
 
-    const existing = await prisma.transacao.findFirst({ where: { id, usuarioId: req.userId } });
+    const existing = await prisma.transacao.findFirst({ where: { id, familiaId: req.familiaId } });
     if (!existing) return res.status(404).json({ error: 'Transação não encontrada' });
 
     const validationError = validateTransactionInput(req.body) || validateAnexoInput(req.body);
     if (validationError) return res.status(400).json({ error: validationError });
-    if (!(await contaPertenceAoUsuario(req.userId, contaId))) {
+    if (!(await contaPertenceAFamilia(req.familiaId, contaId))) {
       return res.status(400).json({ error: 'Conta inválida' });
     }
 
@@ -204,7 +207,7 @@ router.put('/:id', async (req, res) => {
         ? [prisma.transacaoHistorico.create({ data: { transacaoId: id, alteracoes } })]
         : []),
     ]);
-    dispararAvisoOrcamentoSeDespesa(req.userId, updated);
+    dispararAvisoOrcamentoSeDespesa(req.familiaId, updated);
     res.json(serializeTransaction(updated));
   } catch (err) {
     res.status(500).json({ error: 'Erro ao atualizar transação' });
@@ -217,7 +220,7 @@ router.get('/:id/anexo', async (req, res) => {
   try {
     const id = Number(req.params.id);
     const transacao = await prisma.transacao.findFirst({
-      where: { id, usuarioId: req.userId },
+      where: { id, familiaId: req.familiaId },
       select: { anexo: true, anexoNome: true },
     });
     if (!transacao) return res.status(404).json({ error: 'Transação não encontrada' });
@@ -232,7 +235,7 @@ router.get('/:id/anexo', async (req, res) => {
 router.get('/:id/historico', async (req, res) => {
   try {
     const id = Number(req.params.id);
-    const transacao = await prisma.transacao.findFirst({ where: { id, usuarioId: req.userId }, select: { id: true } });
+    const transacao = await prisma.transacao.findFirst({ where: { id, familiaId: req.familiaId }, select: { id: true } });
     if (!transacao) return res.status(404).json({ error: 'Transação não encontrada' });
 
     const historico = await prisma.transacaoHistorico.findMany({
@@ -249,7 +252,7 @@ router.get('/:id/historico', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const id = Number(req.params.id);
-    const existing = await prisma.transacao.findFirst({ where: { id, usuarioId: req.userId } });
+    const existing = await prisma.transacao.findFirst({ where: { id, familiaId: req.familiaId } });
     if (!existing) return res.status(404).json({ error: 'Transação não encontrada' });
 
     await prisma.transacao.delete({ where: { id } });

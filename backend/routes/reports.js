@@ -34,7 +34,7 @@ router.use(dataLimiter);
 router.get('/balance', async (req, res) => {
   try {
     const { start, end } = req.query;
-    const where = { usuarioId: req.userId };
+    const where = { familiaId: req.familiaId };
     if (start || end) {
       where.data = {};
       if (start) where.data.gte = start;
@@ -43,7 +43,7 @@ router.get('/balance', async (req, res) => {
 
     const [rows, contas] = await Promise.all([
       prisma.transacao.groupBy({ by: ['tipo'], where, _sum: { valor: true } }),
-      prisma.conta.findMany({ where: { usuarioId: req.userId }, select: { saldoInicial: true } }),
+      prisma.conta.findMany({ where: { familiaId: req.familiaId }, select: { saldoInicial: true } }),
     ]);
 
     // _sum.valor vem como Prisma.Decimal — convertemos para number antes de somar/subtrair.
@@ -67,7 +67,7 @@ router.get('/monthly', async (req, res) => {
 
     const rawTransactions = await prisma.transacao.findMany({
       where: {
-        usuarioId: req.userId,
+        familiaId: req.familiaId,
         data: { gte: start, lte: end },
       },
       select: TRANSACAO_SELECT_SEM_ANEXO,
@@ -85,7 +85,7 @@ router.get('/monthly', async (req, res) => {
 router.get('/categories', async (req, res) => {
   try {
     const { start, end } = req.query;
-    const where = { usuarioId: req.userId };
+    const where = { familiaId: req.familiaId };
     if (start || end) {
       where.data = {};
       if (start) where.data.gte = start;
@@ -114,7 +114,7 @@ router.get('/evolution', async (req, res) => {
     const startDate = sixMonthsAgo.toISOString().slice(0, 10);
 
     const rawTransactions = await prisma.transacao.findMany({
-      where: { usuarioId: req.userId, data: { gte: startDate } },
+      where: { familiaId: req.familiaId, data: { gte: startDate } },
       select: { tipo: true, valor: true, data: true },
     });
 
@@ -136,16 +136,16 @@ router.get('/insights', async (req, res) => {
     const [rowsAtual, rowsAnterior, orcamentos, metas] = await Promise.all([
       prisma.transacao.groupBy({
         by: ['categoria', 'tipo'],
-        where: { usuarioId: req.userId, data: { gte: startAtual, lte: endAtual } },
+        where: { familiaId: req.familiaId, data: { gte: startAtual, lte: endAtual } },
         _sum: { valor: true },
       }),
       prisma.transacao.groupBy({
         by: ['categoria', 'tipo'],
-        where: { usuarioId: req.userId, data: { gte: startAnterior, lte: endAnterior } },
+        where: { familiaId: req.familiaId, data: { gte: startAnterior, lte: endAnterior } },
         _sum: { valor: true },
       }),
-      prisma.orcamento.findMany({ where: { usuarioId: req.userId } }),
-      prisma.meta.findMany({ where: { usuarioId: req.userId }, include: { aportes: true } }),
+      prisma.orcamento.findMany({ where: { familiaId: req.familiaId } }),
+      prisma.meta.findMany({ where: { familiaId: req.familiaId }, include: { aportes: true } }),
     ]);
 
     const categoriasMesAtual = rowsAtual.map(r => ({ categoria: r.categoria, tipo: r.tipo, total: Number(r._sum.valor) }));
@@ -181,7 +181,7 @@ router.get('/projecao', async (req, res) => {
   try {
     // Materializa antes de projetar — sem isso, uma recorrência já vencida hoje entraria
     // duas vezes: uma como "recorrência futura" e outra quando finalmente fosse gerada.
-    await ensureOccurrences(req.userId);
+    await ensureOccurrences(req.familiaId);
 
     const hoje = new Date();
     const ano = hoje.getFullYear();
@@ -193,13 +193,13 @@ router.get('/projecao', async (req, res) => {
     const totalDiasNoMes = Number(end.slice(-2));
 
     const [balanceRows, contas, despesasNaoRecAgg, recorrencias] = await Promise.all([
-      prisma.transacao.groupBy({ by: ['tipo'], where: { usuarioId: req.userId }, _sum: { valor: true } }),
-      prisma.conta.findMany({ where: { usuarioId: req.userId }, select: { saldoInicial: true } }),
+      prisma.transacao.groupBy({ by: ['tipo'], where: { familiaId: req.familiaId }, _sum: { valor: true } }),
+      prisma.conta.findMany({ where: { familiaId: req.familiaId }, select: { saldoInicial: true } }),
       prisma.transacao.aggregate({
-        where: { usuarioId: req.userId, tipo: 'despesa', recorrenciaId: null, data: { gte: start, lte: hojeStr } },
+        where: { familiaId: req.familiaId, tipo: 'despesa', recorrenciaId: null, data: { gte: start, lte: hojeStr } },
         _sum: { valor: true },
       }),
-      prisma.recorrencia.findMany({ where: { usuarioId: req.userId, ativa: true } }),
+      prisma.recorrencia.findMany({ where: { familiaId: req.familiaId, ativa: true } }),
     ]);
 
     const normalized = balanceRows.map(r => ({ tipo: r.tipo, _sum: { valor: Number(r._sum.valor) } }));

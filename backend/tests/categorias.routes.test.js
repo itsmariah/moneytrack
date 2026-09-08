@@ -22,8 +22,8 @@ const rawCategoria = (overrides = {}) => ({
 });
 
 beforeEach(() => {
-  // authMiddleware confere tokenVersion a cada requisição autenticada.
-  vi.spyOn(prisma.usuario, 'findUnique').mockResolvedValue({ tokenVersion: 0 });
+  // authMiddleware confere tokenVersion e resolve a família a cada requisição autenticada.
+  vi.spyOn(prisma.usuario, 'findUnique').mockResolvedValue({ tokenVersion: 0, familiaId: 1, papelFamilia: 'dono' });
 });
 
 afterEach(() => {
@@ -58,13 +58,13 @@ describe('GET /api/categorias', () => {
     expect(createManySpy).not.toHaveBeenCalled();
   });
 
-  it('escopa a busca por usuarioId do token e aceita filtro por tipo', async () => {
+  it('escopa a busca por familiaId do token e aceita filtro por tipo', async () => {
     vi.spyOn(prisma.categoria, 'count').mockResolvedValue(1);
     const findSpy = vi.spyOn(prisma.categoria, 'findMany').mockResolvedValue([]);
 
     await request(app).get('/api/categorias?tipo=receita&usuarioId=999').set('Authorization', `Bearer ${token}`);
 
-    expect(findSpy.mock.calls[0][0].where).toEqual({ usuarioId: 7, tipo: 'receita' });
+    expect(findSpy.mock.calls[0][0].where).toEqual({ familiaId: 1, tipo: 'receita' });
   });
 });
 
@@ -143,7 +143,7 @@ describe('PUT /api/categorias/:id', () => {
     expect(res.status).toBe(200);
     expect(res.body.nome).toBe('Comida');
     expect(categoriaUpdateSpy.mock.calls[0][0].data.nome).toBe('Comida');
-    expect(txSpy.mock.calls[0][0].where).toEqual({ usuarioId: 7, categoria: 'Alimentação' });
+    expect(txSpy.mock.calls[0][0].where).toEqual({ familiaId: 1, categoria: 'Alimentação' });
     expect(txSpy.mock.calls[0][0].data).toEqual({ categoria: 'Comida' });
     expect(recSpy).toHaveBeenCalled();
     expect(orcSpy).toHaveBeenCalled();

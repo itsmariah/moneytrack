@@ -7,6 +7,21 @@ const prisma = require('../database/db');
 const authMiddleware = require('../middleware/auth');
 const { sendPasswordResetEmail } = require('../utils/mailer');
 const { hashResetToken } = require('../utils/resetToken');
+const { gerarCodigoUnico } = require('../utils/gerarCodigoFamilia');
+
+const USER_FAMILIA_SELECT = {
+  id: true,
+  nome: true,
+  email: true,
+  foto: true,
+  papelFamilia: true,
+  familia: { select: { id: true, nome: true, codigo: true } },
+};
+
+function serializeUserWithFamilia(user) {
+  const { papelFamilia, familia, ...rest } = user;
+  return { ...rest, familia: { ...familia, papel: papelFamilia } };
+}
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -57,14 +72,28 @@ router.post('/register', registerLimiter, async (req, res) => {
     if (existing) return res.status(409).json({ error: 'E-mail já cadastrado' });
 
     const hash = await bcrypt.hash(senha, 10);
-    const user = await prisma.usuario.create({ data: { nome, email, senha: hash } });
+
+    // Todo usuário nasce com sua própria "família pessoal" (1 membro, dono) — sem
+    // fricção pra quem nunca vai compartilhar nada, e já pronta pra virar compartilhada
+    // se, mais tarde, outra pessoa entrar usando o código dela.
+    const codigo = await gerarCodigoUnico();
+    const familia = await prisma.familia.create({ data: { nome: `Família de ${nome}`, codigo } });
+
+    const user = await prisma.usuario.create({
+      data: { nome, email, senha: hash, familiaId: familia.id, papelFamilia: 'dono' },
+    });
 
     // Toda transação exige uma conta — sem isso o usuário ficaria sem conseguir
     // lançar a primeira, já que o app não pede pra "criar uma conta" no cadastro.
-    await prisma.conta.create({ data: { usuarioId: user.id, nome: 'Conta principal', tipo: 'corrente', saldoInicial: 0 } });
+    await prisma.conta.create({
+      data: { usuarioId: user.id, familiaId: familia.id, nome: 'Conta principal', tipo: 'corrente', saldoInicial: 0 },
+    });
 
     const token = jwt.sign({ id: user.id, tokenVersion: user.tokenVersion }, JWT_SECRET, { expiresIn: '7d' });
-    res.status(201).json({ token, user: { id: user.id, nome: user.nome, email: user.email, foto: user.foto } });
+    res.status(201).json({
+      token,
+      user: serializeUserWithFamilia({ id: user.id, nome: user.nome, email: user.email, foto: user.foto, papelFamilia: user.papelFamilia, familia }),
+    });
   } catch (err) {
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
@@ -78,13 +107,14 @@ router.post('/login', loginLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Preencha e-mail e senha' });
     }
 
-    const user = await prisma.usuario.findUnique({ where: { email } });
+    const user = await prisma.usuario.findUnique({ where: { email }, select: { ...USER_FAMILIA_SELECT, senha: true, tokenVersion: true } });
     if (!user || !(await bcrypt.compare(senha, user.senha))) {
       return res.status(401).json({ error: 'E-mail ou senha incorretos' });
     }
 
     const token = jwt.sign({ id: user.id, tokenVersion: user.tokenVersion }, JWT_SECRET, { expiresIn: '7d' });
-    res.json({ token, user: { id: user.id, nome: user.nome, email: user.email, foto: user.foto } });
+    const { senha: _senha, tokenVersion: _tokenVersion, ...userFields } = user;
+    res.json({ token, user: serializeUserWithFamilia(userFields) });
   } catch (err) {
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
@@ -165,10 +195,10 @@ router.get('/me', authMiddleware, async (req, res) => {
   try {
     const user = await prisma.usuario.findUnique({
       where: { id: req.userId },
-      select: { id: true, nome: true, email: true, foto: true },
+      select: USER_FAMILIA_SELECT,
     });
     if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
-    res.json(user);
+    res.json(serializeUserWithFamilia(user));
   } catch (err) {
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
@@ -218,11 +248,11 @@ router.put('/profile', authMiddleware, async (req, res) => {
     const updated = await prisma.usuario.update({
       where: { id: req.userId },
       data,
-      select: { id: true, nome: true, email: true, foto: true, tokenVersion: true },
+      select: { ...USER_FAMILIA_SELECT, tokenVersion: true },
     });
 
     const { tokenVersion, ...userFields } = updated;
-    const response = { ...userFields };
+    const response = serializeUserWithFamilia(userFields);
     if (trocandoSenha) {
       response.token = jwt.sign({ id: updated.id, tokenVersion }, JWT_SECRET, { expiresIn: '7d' });
     }

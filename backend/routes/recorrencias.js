@@ -20,20 +20,20 @@ const dataLimiter = rateLimit({
 });
 router.use(dataLimiter);
 
-// Confere que a conta existe e pertence ao usuário do token (evita atribuir uma
-// recorrência a uma conta de outro usuário via IDOR).
-async function contaPertenceAoUsuario(usuarioId, contaId) {
+// Confere que a conta existe e pertence à família do token (evita atribuir uma
+// recorrência a uma conta de outra família via IDOR).
+async function contaPertenceAFamilia(familiaId, contaId) {
   if (!contaId) return false;
-  const conta = await prisma.conta.findFirst({ where: { id: Number(contaId), usuarioId } });
+  const conta = await prisma.conta.findFirst({ where: { id: Number(contaId), familiaId } });
   return Boolean(conta);
 }
 
-// Listar recorrências do usuário — materializa antes qualquer ocorrência já vencida
+// Listar recorrências da família — materializa antes qualquer ocorrência já vencida
 router.get('/', async (req, res) => {
   try {
-    await ensureOccurrences(req.userId);
+    await ensureOccurrences(req.familiaId);
     const recorrencias = await prisma.recorrencia.findMany({
-      where: { usuarioId: req.userId },
+      where: { familiaId: req.familiaId },
       orderBy: [{ ativa: 'desc' }, { diaDoMes: 'asc' }],
     });
     res.json(serializeRecorrencias(recorrencias));
@@ -49,13 +49,14 @@ router.post('/', async (req, res) => {
 
     const validationError = validateRecorrenciaInput(req.body);
     if (validationError) return res.status(400).json({ error: validationError });
-    if (!(await contaPertenceAoUsuario(req.userId, contaId))) {
+    if (!(await contaPertenceAFamilia(req.familiaId, contaId))) {
       return res.status(400).json({ error: 'Conta inválida' });
     }
 
     const created = await prisma.recorrencia.create({
       data: {
         usuarioId: req.userId,
+        familiaId: req.familiaId,
         contaId: Number(contaId),
         tipo,
         valor: Number(valor),
@@ -68,7 +69,7 @@ router.post('/', async (req, res) => {
     });
 
     // Se dataInicio já é passado/hoje, gera de imediato as ocorrências já vencidas.
-    await ensureOccurrences(req.userId);
+    await ensureOccurrences(req.familiaId);
 
     res.status(201).json(serializeRecorrencia(created));
   } catch (err) {
@@ -82,12 +83,12 @@ router.put('/:id', async (req, res) => {
     const id = Number(req.params.id);
     const { tipo, valor, categoria, descricao, diaDoMes, dataFim, ativa, contaId } = req.body;
 
-    const existing = await prisma.recorrencia.findFirst({ where: { id, usuarioId: req.userId } });
+    const existing = await prisma.recorrencia.findFirst({ where: { id, familiaId: req.familiaId } });
     if (!existing) return res.status(404).json({ error: 'Recorrência não encontrada' });
 
     const validationError = validateRecorrenciaInput({ tipo, valor, categoria, diaDoMes, dataInicio: existing.dataInicio, dataFim, contaId });
     if (validationError) return res.status(400).json({ error: validationError });
-    if (!(await contaPertenceAoUsuario(req.userId, contaId))) {
+    if (!(await contaPertenceAFamilia(req.familiaId, contaId))) {
       return res.status(400).json({ error: 'Conta inválida' });
     }
 
@@ -105,7 +106,7 @@ router.put('/:id', async (req, res) => {
       },
     });
 
-    if (updated.ativa) await ensureOccurrences(req.userId);
+    if (updated.ativa) await ensureOccurrences(req.familiaId);
 
     res.json(serializeRecorrencia(updated));
   } catch (err) {
@@ -117,7 +118,7 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const id = Number(req.params.id);
-    const existing = await prisma.recorrencia.findFirst({ where: { id, usuarioId: req.userId } });
+    const existing = await prisma.recorrencia.findFirst({ where: { id, familiaId: req.familiaId } });
     if (!existing) return res.status(404).json({ error: 'Recorrência não encontrada' });
 
     await prisma.recorrencia.delete({ where: { id } });

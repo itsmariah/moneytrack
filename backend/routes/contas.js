@@ -19,10 +19,10 @@ const dataLimiter = rateLimit({
 });
 router.use(dataLimiter);
 
-// Listar contas do usuário com o saldo atual de cada uma
+// Listar contas da família com o saldo atual de cada uma
 router.get('/', async (req, res) => {
   try {
-    const contas = await prisma.conta.findMany({ where: { usuarioId: req.userId }, orderBy: { createdAt: 'asc' } });
+    const contas = await prisma.conta.findMany({ where: { familiaId: req.familiaId }, orderBy: { createdAt: 'asc' } });
     if (contas.length === 0) return res.json([]);
 
     const contaIds = contas.map(c => c.id);
@@ -56,7 +56,7 @@ router.post('/', async (req, res) => {
     if (validationError) return res.status(400).json({ error: validationError });
 
     const created = await prisma.conta.create({
-      data: { usuarioId: req.userId, nome: nome.trim(), tipo, saldoInicial: Number(saldoInicial) },
+      data: { usuarioId: req.userId, familiaId: req.familiaId, nome: nome.trim(), tipo, saldoInicial: Number(saldoInicial) },
     });
     res.status(201).json(serializeConta(created));
   } catch (err) {
@@ -70,7 +70,7 @@ router.put('/:id', async (req, res) => {
     const id = Number(req.params.id);
     const { nome, tipo, saldoInicial } = req.body;
 
-    const existing = await prisma.conta.findFirst({ where: { id, usuarioId: req.userId } });
+    const existing = await prisma.conta.findFirst({ where: { id, familiaId: req.familiaId } });
     if (!existing) return res.status(404).json({ error: 'Conta não encontrada' });
 
     const validationError = validateContaInput(req.body);
@@ -87,15 +87,15 @@ router.put('/:id', async (req, res) => {
 });
 
 // Excluir conta — cascata apaga as transações e transferências dela junto (o
-// modal de confirmação no frontend avisa isso). Nunca deixa o usuário sem nenhuma conta.
+// modal de confirmação no frontend avisa isso). Nunca deixa a família sem nenhuma conta.
 router.delete('/:id', async (req, res) => {
   try {
     const id = Number(req.params.id);
-    const existing = await prisma.conta.findFirst({ where: { id, usuarioId: req.userId } });
+    const existing = await prisma.conta.findFirst({ where: { id, familiaId: req.familiaId } });
     if (!existing) return res.status(404).json({ error: 'Conta não encontrada' });
 
-    const total = await prisma.conta.count({ where: { usuarioId: req.userId } });
-    if (total <= 1) return res.status(400).json({ error: 'Você precisa ter pelo menos uma conta' });
+    const total = await prisma.conta.count({ where: { familiaId: req.familiaId } });
+    if (total <= 1) return res.status(400).json({ error: 'Sua família precisa ter pelo menos uma conta' });
 
     await prisma.conta.delete({ where: { id } });
     res.status(204).send();

@@ -19,6 +19,14 @@ model Usuario {
   // carregam a versão antiga e são recusados por authMiddleware.
   tokenVersion        Int         @default(0)
   createdAt           DateTime    @default(now())
+  // Todo usuário pertence a exatamente uma família (a "família pessoal" criada no
+  // registro, ou uma compartilhada depois de entrar com um código) — nunca mais de uma,
+  // sem seletor de workspace.
+  familiaId           Int
+  familia             Familia     @relation(fields: [familiaId], references: [id], onDelete: Restrict)
+  // "dono" pode remover membros, renomear a família e regenerar o código; "membro" só
+  // mexe nos dados (criar/editar/excluir), igual a um dono, mas não na família em si.
+  papelFamilia        String      @default("dono")
   transacoes          Transacao[]
   metas               Meta[]
   orcamentos          Orcamento[]
@@ -29,6 +37,27 @@ model Usuario {
   categorias          Categoria[]
 }
 
+// Uma "carteira" compartilhada entre 1+ usuários. Toda visibilidade/posse de dado
+// financeiro passa a ser por familiaId, não por usuarioId (que continua existindo nas
+// tabelas abaixo só como atribuição — "quem lançou" — não como controle de acesso).
+model Familia {
+  id                Int               @id @default(autoincrement())
+  nome              String
+  // Código curto compartilhado fora do app (ex: WhatsApp) pra outra pessoa entrar —
+  // sem convite por e-mail, sem token com expiração.
+  codigo            String            @unique
+  createdAt         DateTime          @default(now())
+  membros           Usuario[]
+  categorias        Categoria[]
+  transacoes        Transacao[]
+  contas            Conta[]
+  conexoesBancarias ConexaoBancaria[]
+  transferencias    Transferencia[]
+  recorrencias      Recorrencia[]
+  metas             Meta[]
+  orcamentos        Orcamento[]
+}
+
 // Metadados de exibição (ícone/cor) por categoria — de propósito NÃO é uma foreign key
 // de Transacao/Recorrencia/Orcamento, que continuam guardando categoria como texto livre
 // (como sempre foi). Isso evita qualquer migração/backfill em cima de dados reais: uma
@@ -36,19 +65,23 @@ model Usuario {
 model Categoria {
   id        Int      @id @default(autoincrement())
   usuarioId Int
+  familiaId Int
   nome      String
   tipo      String
   icone     String   @default("💰")
   cor       String   @default("#6366f1")
   createdAt DateTime @default(now())
   usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  familia   Familia  @relation(fields: [familiaId], references: [id], onDelete: Cascade)
 
-  @@unique([usuarioId, nome, tipo])
+  @@unique([familiaId, nome, tipo])
 }
 
 model Transacao {
   id            Int          @id @default(autoincrement())
   usuarioId     Int
+  familiaId     Int
+  familia       Familia      @relation(fields: [familiaId], references: [id], onDelete: Cascade)
   tipo          String
   valor         Decimal      @db.Decimal(12, 2)
   categoria     String
@@ -92,11 +125,13 @@ model TransacaoHistorico {
 model Conta {
   id                     Int             @id @default(autoincrement())
   usuarioId              Int
+  familiaId              Int
   nome                   String
   tipo                   String
   saldoInicial           Decimal         @db.Decimal(12, 2) @default(0)
   createdAt              DateTime        @default(now())
   usuario                Usuario         @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  familia                Familia         @relation(fields: [familiaId], references: [id], onDelete: Cascade)
   transacoes             Transacao[]
   transferenciasSaida    Transferencia[] @relation("TransferenciasSaida")
   transferenciasEntrada  Transferencia[] @relation("TransferenciasEntrada")
@@ -115,6 +150,7 @@ model Conta {
 model ConexaoBancaria {
   id                  Int      @id @default(autoincrement())
   usuarioId           Int
+  familiaId           Int
   pluggyItemId        String   @unique
   nomeConector        String
   status              String
@@ -122,6 +158,7 @@ model ConexaoBancaria {
   ultimaSincronizacao DateTime?
   createdAt           DateTime @default(now())
   usuario             Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  familia             Familia  @relation(fields: [familiaId], references: [id], onDelete: Cascade)
   contas              Conta[]
 }
 
@@ -131,6 +168,7 @@ model ConexaoBancaria {
 model Transferencia {
   id             Int      @id @default(autoincrement())
   usuarioId      Int
+  familiaId      Int
   contaOrigemId  Int
   contaDestinoId Int
   valor          Decimal  @db.Decimal(12, 2)
@@ -138,6 +176,7 @@ model Transferencia {
   descricao      String   @default("")
   createdAt      DateTime @default(now())
   usuario        Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  familia        Familia  @relation(fields: [familiaId], references: [id], onDelete: Cascade)
   contaOrigem    Conta    @relation("TransferenciasSaida", fields: [contaOrigemId], references: [id], onDelete: Cascade)
   contaDestino   Conta    @relation("TransferenciasEntrada", fields: [contaDestinoId], references: [id], onDelete: Cascade)
 }
@@ -149,6 +188,7 @@ model Transferencia {
 model Recorrencia {
   id          Int         @id @default(autoincrement())
   usuarioId   Int
+  familiaId   Int
   tipo        String
   valor       Decimal     @db.Decimal(12, 2)
   categoria   String
@@ -159,6 +199,7 @@ model Recorrencia {
   ativa       Boolean     @default(true)
   createdAt   DateTime    @default(now())
   usuario     Usuario     @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  familia     Familia     @relation(fields: [familiaId], references: [id], onDelete: Cascade)
   transacoes  Transacao[]
   contaId     Int
   conta       Conta       @relation(fields: [contaId], references: [id], onDelete: Cascade)
@@ -167,11 +208,13 @@ model Recorrencia {
 model Meta {
   id        Int      @id @default(autoincrement())
   usuarioId Int
+  familiaId Int
   titulo    String
   valorAlvo Decimal  @db.Decimal(12, 2)
   prazo     String?
   createdAt DateTime @default(now())
   usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  familia   Familia  @relation(fields: [familiaId], references: [id], onDelete: Cascade)
   aportes   Aporte[]
 }
 
@@ -193,13 +236,15 @@ model Aporte {
 model Orcamento {
   id          Int      @id @default(autoincrement())
   usuarioId   Int
+  familiaId   Int
   categoria   String
   valorLimite Decimal  @db.Decimal(12, 2)
   createdAt   DateTime @default(now())
   usuario     Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  familia     Familia  @relation(fields: [familiaId], references: [id], onDelete: Cascade)
   // Mês (YYYY-MM) do último aviso de orçamento estourado já enviado por e-mail — evita
   // mandar um e-mail novo a cada transação que continua estourando o mesmo orçamento no mês.
   ultimaNotificacaoMes String?
 
-  @@unique([usuarioId, categoria])
+  @@unique([familiaId, categoria])
 }

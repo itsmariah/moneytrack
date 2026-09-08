@@ -27,13 +27,13 @@ const NOMES_DESPESA = [
   ['Outros', '💰'],
 ];
 
-function defaultCategorias(usuarioId) {
+function defaultCategorias(usuarioId, familiaId) {
   const linhas = [];
   NOMES_RECEITA.forEach(([nome, icone], i) => {
-    linhas.push({ usuarioId, nome, tipo: 'receita', icone, cor: PALETA[i % PALETA.length] });
+    linhas.push({ usuarioId, familiaId, nome, tipo: 'receita', icone, cor: PALETA[i % PALETA.length] });
   });
   NOMES_DESPESA.forEach(([nome, icone], i) => {
-    linhas.push({ usuarioId, nome, tipo: 'despesa', icone, cor: PALETA[i % PALETA.length] });
+    linhas.push({ usuarioId, familiaId, nome, tipo: 'despesa', icone, cor: PALETA[i % PALETA.length] });
   });
   return linhas;
 }

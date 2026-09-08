@@ -24,7 +24,11 @@ afterEach(() => {
 describe('POST /api/auth/register', () => {
   it('cria um usuário e retorna token + dados básicos (201)', async () => {
     vi.spyOn(prisma.usuario, 'findUnique').mockResolvedValue(null);
-    vi.spyOn(prisma.usuario, 'create').mockResolvedValue({ id: 1, nome: 'Ana', email: 'ana@example.com', foto: null, tokenVersion: 0 });
+    // Toda conta nasce com uma família pessoal — gerarCodigoUnico confere unicidade
+    // consultando prisma.familia.findUnique antes de aceitar o código sorteado.
+    vi.spyOn(prisma.familia, 'findUnique').mockResolvedValue(null);
+    const familiaCreateSpy = vi.spyOn(prisma.familia, 'create').mockResolvedValue({ id: 10, nome: 'Família de Ana', codigo: 'AB3F92' });
+    vi.spyOn(prisma.usuario, 'create').mockResolvedValue({ id: 1, nome: 'Ana', email: 'ana@example.com', foto: null, tokenVersion: 0, papelFamilia: 'dono' });
     const contaCreateSpy = vi.spyOn(prisma.conta, 'create').mockResolvedValue({ id: 1 });
 
     const res = await request(app)
@@ -33,9 +37,14 @@ describe('POST /api/auth/register', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.token).toBeTruthy();
-    expect(res.body.user).toEqual({ id: 1, nome: 'Ana', email: 'ana@example.com', foto: null });
+    expect(res.body.user).toEqual({
+      id: 1, nome: 'Ana', email: 'ana@example.com', foto: null,
+      familia: { id: 10, nome: 'Família de Ana', codigo: 'AB3F92', papel: 'dono' },
+    });
+    expect(familiaCreateSpy.mock.calls[0][0].data.nome).toBe('Família de Ana');
     // Toda transação exige conta — o cadastro precisa deixar o usuário já pronto pra lançar a primeira.
     expect(contaCreateSpy.mock.calls[0][0].data.usuarioId).toBe(1);
+    expect(contaCreateSpy.mock.calls[0][0].data.familiaId).toBe(10);
   });
 
   it('rejeita e-mail já cadastrado (409)', async () => {

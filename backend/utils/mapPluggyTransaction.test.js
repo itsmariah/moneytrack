@@ -18,8 +18,9 @@ describe('toDateStr', () => {
 describe('mapPluggyTransaction', () => {
   it('mapeia amount positivo como receita, com valor absoluto', () => {
     const tx = { id: 'abc-123', amount: 1500.5, category: 'Salário', description: 'Pagamento salário', date: '2026-08-05T00:00:00.000Z' };
-    expect(mapPluggyTransaction(tx, { usuarioId: 3, contaId: 7 })).toEqual({
+    expect(mapPluggyTransaction(tx, { usuarioId: 3, familiaId: 9, contaId: 7 })).toEqual({
       usuarioId: 3,
+      familiaId: 9,
       contaId: 7,
       tipo: 'receita',
       valor: 1500.5,

@@ -22,8 +22,8 @@ const rawConta = (overrides = {}) => ({
 });
 
 beforeEach(() => {
-  // authMiddleware confere tokenVersion a cada requisição autenticada.
-  vi.spyOn(prisma.usuario, 'findUnique').mockResolvedValue({ tokenVersion: 0 });
+  // authMiddleware confere tokenVersion e resolve a família a cada requisição autenticada.
+  vi.spyOn(prisma.usuario, 'findUnique').mockResolvedValue({ tokenVersion: 0, familiaId: 1, papelFamilia: 'dono' });
 });
 
 afterEach(() => {
@@ -75,10 +75,10 @@ describe('GET /api/contas', () => {
     expect(res.body[0].saldo).toBe(440);
   });
 
-  it('escopa a busca por usuarioId do token', async () => {
+  it('escopa a busca por familiaId do token', async () => {
     const findSpy = vi.spyOn(prisma.conta, 'findMany').mockResolvedValue([]);
     await request(app).get('/api/contas?usuarioId=999').set('Authorization', `Bearer ${token}`);
-    expect(findSpy.mock.calls[0][0].where.usuarioId).toBe(7);
+    expect(findSpy.mock.calls[0][0].where.familiaId).toBe(1);
   });
 });
 

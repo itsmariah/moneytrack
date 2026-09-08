@@ -11,8 +11,8 @@ const app = createTestApp();
 const token = makeToken(7);
 
 beforeEach(() => {
-  // authMiddleware confere tokenVersion a cada requisição autenticada.
-  vi.spyOn(prisma.usuario, 'findUnique').mockResolvedValue({ tokenVersion: 0 });
+  // authMiddleware confere tokenVersion e resolve a família a cada requisição autenticada.
+  vi.spyOn(prisma.usuario, 'findUnique').mockResolvedValue({ tokenVersion: 0, familiaId: 1, papelFamilia: 'dono' });
 });
 
 afterEach(() => {
@@ -53,11 +53,11 @@ describe('GET /api/reports/balance', () => {
     expect(res.body).toEqual({ receitas: 1000, despesas: 0, saldo: 1700 });
   });
 
-  it('escopa o groupBy pelo usuarioId do token', async () => {
+  it('escopa o groupBy pelo familiaId do token', async () => {
     const spy = vi.spyOn(prisma.transacao, 'groupBy').mockResolvedValue([]);
     vi.spyOn(prisma.conta, 'findMany').mockResolvedValue([]);
     await request(app).get('/api/reports/balance').set('Authorization', `Bearer ${token}`);
-    expect(spy.mock.calls[0][0].where.usuarioId).toBe(7);
+    expect(spy.mock.calls[0][0].where.familiaId).toBe(1);
   });
 });
 
@@ -127,15 +127,15 @@ describe('GET /api/reports/insights', () => {
     expect(res.body).toContainEqual(expect.objectContaining({ tipo: 'categoria_aumento', categoria: 'Alimentação' }));
   });
 
-  it('escopa as consultas por usuarioId do token', async () => {
+  it('escopa as consultas por familiaId do token', async () => {
     const groupBySpy = vi.spyOn(prisma.transacao, 'groupBy').mockResolvedValue([]);
     vi.spyOn(prisma.orcamento, 'findMany').mockResolvedValue([]);
     const metaSpy = vi.spyOn(prisma.meta, 'findMany').mockResolvedValue([]);
 
     await request(app).get('/api/reports/insights?usuarioId=999').set('Authorization', `Bearer ${token}`);
 
-    expect(groupBySpy.mock.calls[0][0].where.usuarioId).toBe(7);
-    expect(metaSpy.mock.calls[0][0].where.usuarioId).toBe(7);
+    expect(groupBySpy.mock.calls[0][0].where.familiaId).toBe(1);
+    expect(metaSpy.mock.calls[0][0].where.familiaId).toBe(1);
   });
 });
 
@@ -177,7 +177,7 @@ describe('GET /api/reports/projecao', () => {
     expect(res.body.mes).toBe('2026-08');
   });
 
-  it('escopa a agregação de gastos não recorrentes por usuarioId do token', async () => {
+  it('escopa a agregação de gastos não recorrentes por familiaId do token', async () => {
     vi.spyOn(prisma.transacao, 'groupBy').mockResolvedValue([]);
     vi.spyOn(prisma.conta, 'findMany').mockResolvedValue([]);
     const aggSpy = vi.spyOn(prisma.transacao, 'aggregate').mockResolvedValue({ _sum: { valor: null } });
@@ -185,7 +185,7 @@ describe('GET /api/reports/projecao', () => {
 
     await request(app).get('/api/reports/projecao?usuarioId=999').set('Authorization', `Bearer ${token}`);
 
-    expect(aggSpy.mock.calls[0][0].where.usuarioId).toBe(7);
+    expect(aggSpy.mock.calls[0][0].where.familiaId).toBe(1);
     expect(aggSpy.mock.calls[0][0].where.recorrenciaId).toBeNull();
   });
 });

@@ -12,13 +12,13 @@ const app = createTestApp();
 const token = makeToken(7);
 
 beforeEach(() => {
-  // authMiddleware confere tokenVersion a cada requisição autenticada.
-  vi.spyOn(prisma.usuario, 'findUnique').mockResolvedValue({ tokenVersion: 0 });
+  // authMiddleware confere tokenVersion e resolve a família a cada requisição autenticada.
+  vi.spyOn(prisma.usuario, 'findUnique').mockResolvedValue({ tokenVersion: 0, familiaId: 1, papelFamilia: 'dono' });
   // GET / materializa recorrências vencidas antes de listar — sem recorrência ativa
   // nenhuma, não deve gerar nada (ver describe dedicado mais abaixo).
   vi.spyOn(prisma.recorrencia, 'findMany').mockResolvedValue([]);
-  // contaPertenceAoUsuario: por padrão a conta 1 existe e é do usuário 7.
-  vi.spyOn(prisma.conta, 'findFirst').mockResolvedValue({ id: 1, usuarioId: 7 });
+  // contaPertenceAFamilia: por padrão a conta 1 existe e é da família 1.
+  vi.spyOn(prisma.conta, 'findFirst').mockResolvedValue({ id: 1, familiaId: 1 });
   // PUT roda update + (opcionalmente) criação de histórico dentro de $transaction — como
   // nos outros arquivos de teste, simulamos rodando as duas promises com Promise.all.
   vi.spyOn(prisma, '$transaction').mockImplementation((arr) => Promise.all(arr));
@@ -57,7 +57,7 @@ describe('GET /api/transactions', () => {
     expect(res.body).toMatchObject({ page: 1, limit: 50, total: 1, totalPages: 1 });
   });
 
-  it('escopa a busca por usuarioId do token, nunca do query string', async () => {
+  it('escopa a busca por familiaId do token, nunca do query string', async () => {
     const findSpy = vi.spyOn(prisma.transacao, 'findMany').mockResolvedValue([]);
     vi.spyOn(prisma.transacao, 'count').mockResolvedValue(0);
 
@@ -66,7 +66,7 @@ describe('GET /api/transactions', () => {
       .set('Authorization', `Bearer ${token}`);
 
     const whereUsed = findSpy.mock.calls[0][0].where;
-    expect(whereUsed.usuarioId).toBe(7);
+    expect(whereUsed.familiaId).toBe(1);
   });
 });
 
@@ -152,7 +152,7 @@ describe('POST /api/transactions', () => {
       .send({ tipo: 'despesa', valor: 50, categoria: 'Lazer', data: '2026-09-05', contaId: 1 });
     await flushPromises();
 
-    expect(orcamentoSpy).toHaveBeenCalledWith({ where: { usuarioId_categoria: { usuarioId: 7, categoria: 'Lazer' } } });
+    expect(orcamentoSpy).toHaveBeenCalledWith({ where: { familiaId_categoria: { familiaId: 1, categoria: 'Lazer' } } });
   });
 
   it('não verifica orçamento ao criar uma receita', async () => {

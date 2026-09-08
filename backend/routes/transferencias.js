@@ -20,11 +20,11 @@ router.use(dataLimiter);
 
 const transferenciaInclude = { contaOrigem: { select: { nome: true } }, contaDestino: { select: { nome: true } } };
 
-// Listar transferências do usuário
+// Listar transferências da família
 router.get('/', async (req, res) => {
   try {
     const transferencias = await prisma.transferencia.findMany({
-      where: { usuarioId: req.userId },
+      where: { familiaId: req.familiaId },
       include: transferenciaInclude,
       orderBy: [{ data: 'desc' }, { createdAt: 'desc' }],
     });
@@ -34,7 +34,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Criar transferência entre duas contas do usuário
+// Criar transferência entre duas contas da família
 router.post('/', async (req, res) => {
   try {
     const { contaOrigemId, contaDestinoId, valor, data, descricao } = req.body;
@@ -43,13 +43,14 @@ router.post('/', async (req, res) => {
     if (validationError) return res.status(400).json({ error: validationError });
 
     const contas = await prisma.conta.findMany({
-      where: { usuarioId: req.userId, id: { in: [Number(contaOrigemId), Number(contaDestinoId)] } },
+      where: { familiaId: req.familiaId, id: { in: [Number(contaOrigemId), Number(contaDestinoId)] } },
     });
     if (contas.length !== 2) return res.status(400).json({ error: 'Conta de origem ou destino inválida' });
 
     const created = await prisma.transferencia.create({
       data: {
         usuarioId: req.userId,
+        familiaId: req.familiaId,
         contaOrigemId: Number(contaOrigemId),
         contaDestinoId: Number(contaDestinoId),
         valor: Number(valor),
@@ -68,7 +69,7 @@ router.post('/', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const id = Number(req.params.id);
-    const existing = await prisma.transferencia.findFirst({ where: { id, usuarioId: req.userId } });
+    const existing = await prisma.transferencia.findFirst({ where: { id, familiaId: req.familiaId } });
     if (!existing) return res.status(404).json({ error: 'Transferência não encontrada' });
 
     await prisma.transferencia.delete({ where: { id } });

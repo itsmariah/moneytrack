@@ -20,7 +20,7 @@ const dataLimiter = rateLimit({
 });
 router.use(dataLimiter);
 
-// Listar orçamentos do usuário com o gasto do mês pedido
+// Listar orçamentos da família com o gasto do mês pedido
 router.get('/', async (req, res) => {
   try {
     const { month } = req.query;
@@ -29,7 +29,7 @@ router.get('/', async (req, res) => {
     }
 
     const orcamentos = await prisma.orcamento.findMany({
-      where: { usuarioId: req.userId },
+      where: { familiaId: req.familiaId },
       orderBy: { categoria: 'asc' },
     });
     if (orcamentos.length === 0) return res.json([]);
@@ -38,7 +38,7 @@ router.get('/', async (req, res) => {
     const gastoRows = await prisma.transacao.groupBy({
       by: ['categoria'],
       where: {
-        usuarioId: req.userId,
+        familiaId: req.familiaId,
         tipo: 'despesa',
         data: { gte: start, lte: end },
         categoria: { in: orcamentos.map(o => o.categoria) },
@@ -55,7 +55,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Criar orçamento (um por categoria por usuário)
+// Criar orçamento (um por categoria por família)
 router.post('/', async (req, res) => {
   try {
     const { categoria, valorLimite } = req.body;
@@ -63,11 +63,11 @@ router.post('/', async (req, res) => {
     const validationError = validateOrcamentoInput(req.body);
     if (validationError) return res.status(400).json({ error: validationError });
 
-    const existing = await prisma.orcamento.findFirst({ where: { usuarioId: req.userId, categoria } });
+    const existing = await prisma.orcamento.findFirst({ where: { familiaId: req.familiaId, categoria } });
     if (existing) return res.status(400).json({ error: 'Já existe um orçamento para esta categoria. Edite o orçamento existente.' });
 
     const created = await prisma.orcamento.create({
-      data: { usuarioId: req.userId, categoria, valorLimite: Number(valorLimite) },
+      data: { usuarioId: req.userId, familiaId: req.familiaId, categoria, valorLimite: Number(valorLimite) },
     });
     res.status(201).json(serializeOrcamento(created));
   } catch (err) {
@@ -81,14 +81,14 @@ router.put('/:id', async (req, res) => {
     const id = Number(req.params.id);
     const { categoria, valorLimite } = req.body;
 
-    const existing = await prisma.orcamento.findFirst({ where: { id, usuarioId: req.userId } });
+    const existing = await prisma.orcamento.findFirst({ where: { id, familiaId: req.familiaId } });
     if (!existing) return res.status(404).json({ error: 'Orçamento não encontrado' });
 
     const validationError = validateOrcamentoInput(req.body);
     if (validationError) return res.status(400).json({ error: validationError });
 
     if (categoria !== existing.categoria) {
-      const conflict = await prisma.orcamento.findFirst({ where: { usuarioId: req.userId, categoria, NOT: { id } } });
+      const conflict = await prisma.orcamento.findFirst({ where: { familiaId: req.familiaId, categoria, NOT: { id } } });
       if (conflict) return res.status(400).json({ error: 'Já existe um orçamento para esta categoria.' });
     }
 
@@ -106,7 +106,7 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const id = Number(req.params.id);
-    const existing = await prisma.orcamento.findFirst({ where: { id, usuarioId: req.userId } });
+    const existing = await prisma.orcamento.findFirst({ where: { id, familiaId: req.familiaId } });
     if (!existing) return res.status(404).json({ error: 'Orçamento não encontrado' });
 
     await prisma.orcamento.delete({ where: { id } });

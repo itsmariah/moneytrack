@@ -6,10 +6,11 @@ function toDateStr(date) {
 // Converte uma transação vinda da Pluggy pro formato de Transacao do app. A Pluggy
 // normaliza o sinal de "amount" (positivo = entrou dinheiro, negativo = saiu),
 // independente do tipo de conta (corrente ou cartão de crédito).
-function mapPluggyTransaction(pluggyTx, { usuarioId, contaId }) {
+function mapPluggyTransaction(pluggyTx, { usuarioId, familiaId, contaId }) {
   const valor = Number(pluggyTx.amount);
   return {
     usuarioId,
+    familiaId,
     contaId,
     tipo: valor >= 0 ? 'receita' : 'despesa',
     valor: Math.abs(valor),

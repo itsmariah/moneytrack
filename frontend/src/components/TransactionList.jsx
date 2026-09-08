@@ -1,4 +1,5 @@
 import { fmt, fmtDate } from '../utils/format'
+import { useAuth } from '../context/AuthContext'
 
 // updatedAt e createdAt vêm do mesmo INSERT (mesmo now() do Postgres), mas usamos uma
 // margem pra não depender de igualdade exata de timestamp entre as duas colunas.
@@ -8,6 +9,8 @@ function foiEditada(t) {
 }
 
 export default function TransactionList({ transactions, onEdit, onDelete, onViewAnexo, onViewHistorico, hasFilters, onCreateClick }) {
+  const { user } = useAuth()
+
   if (transactions.length === 0) {
     if (hasFilters) {
       return (
@@ -64,7 +67,10 @@ export default function TransactionList({ transactions, onEdit, onDelete, onView
                 </button>
               )}
             </span>
-            <span className="tx-meta">{t.categoria} · {fmtDate(t.data)}</span>
+            <span className="tx-meta">
+              {t.categoria} · {fmtDate(t.data)}
+              {t.usuario?.nome && t.usuario.nome !== user?.nome && ` · por ${t.usuario.nome}`}
+            </span>
           </div>
           <div className="tx-amount">
             {t.tipo === 'receita' ? '+' : '-'}{fmt(t.valor)}

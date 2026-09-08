@@ -37,12 +37,12 @@ function expectedOccurrenceDates(recorrencia, hojeStr) {
   return datas;
 }
 
-// Garante que toda ocorrência já vencida de cada recorrência ativa do usuário exista
+// Garante que toda ocorrência já vencida de cada recorrência ativa da família exista
 // como Transacao real. Idempotente (só cria o que ainda não existe) — chamado sempre
-// que o usuário abre a tela de recorrências ou a lista de transações, sem depender de
-// nenhum job/cron rodando no servidor.
-async function ensureOccurrences(usuarioId) {
-  const recorrencias = await prisma.recorrencia.findMany({ where: { usuarioId, ativa: true } });
+// que algum membro da família abre a tela de recorrências ou a lista de transações, sem
+// depender de nenhum job/cron rodando no servidor.
+async function ensureOccurrences(familiaId) {
+  const recorrencias = await prisma.recorrencia.findMany({ where: { familiaId, ativa: true } });
   if (recorrencias.length === 0) return;
 
   const hojeStr = todayLocalStr();
@@ -59,9 +59,12 @@ async function ensureOccurrences(usuarioId) {
     const faltantes = datasEsperadas.filter(d => !jaExistem.has(d));
     if (faltantes.length === 0) continue;
 
+    // Atribuída a quem criou a regra de recorrência (r.usuarioId) — a família de escopo
+    // é sempre a da própria recorrência, já que ela nunca muda de família depois de criada.
     await prisma.transacao.createMany({
       data: faltantes.map(data => ({
-        usuarioId,
+        usuarioId: r.usuarioId,
+        familiaId: r.familiaId,
         contaId: r.contaId,
         tipo: r.tipo,
         valor: r.valor,

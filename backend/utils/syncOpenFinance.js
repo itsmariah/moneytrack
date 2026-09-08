@@ -64,6 +64,7 @@ async function sincronizarConexao(conexaoId) {
       conta = await prisma.conta.create({
         data: {
           usuarioId: conexao.usuarioId,
+          familiaId: conexao.familiaId,
           conexaoId: conexao.id,
           pluggyAccountId: account.id,
           nome: account.name || conexao.nomeConector,
@@ -75,7 +76,7 @@ async function sincronizarConexao(conexaoId) {
 
     if (transactions.length > 0) {
       const created = await prisma.transacao.createMany({
-        data: transactions.map(t => mapPluggyTransaction(t, { usuarioId: conexao.usuarioId, contaId: conta.id })),
+        data: transactions.map(t => mapPluggyTransaction(t, { usuarioId: conexao.usuarioId, familiaId: conexao.familiaId, contaId: conta.id })),
         skipDuplicates: true,
       });
       transacoesImportadas += created.count;

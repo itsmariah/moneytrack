@@ -18,22 +18,24 @@ const dataLimiter = rateLimit({
 });
 router.use(dataLimiter);
 
-// Na primeira vez que o usuário acessa a tela (ainda sem nenhuma categoria própria),
+// Na primeira vez que a família acessa a tela (ainda sem nenhuma categoria própria),
 // semeia a lista padrão — assim ninguém vê uma tela vazia, mas sem precisar de nenhum
-// script de backfill rodado manualmente pra usuários já existentes.
-async function ensureCategoriasSeed(usuarioId) {
-  const total = await prisma.categoria.count({ where: { usuarioId } });
+// script de backfill rodado manualmente pra usuários já existentes. skipDuplicates
+// protege contra dois membros da mesma família acessando pela primeira vez ao mesmo
+// tempo (a constraint é por familiaId+nome+tipo, então a segunda tentativa não duplica).
+async function ensureCategoriasSeed(usuarioId, familiaId) {
+  const total = await prisma.categoria.count({ where: { familiaId } });
   if (total === 0) {
-    await prisma.categoria.createMany({ data: defaultCategorias(usuarioId) });
+    await prisma.categoria.createMany({ data: defaultCategorias(usuarioId, familiaId), skipDuplicates: true });
   }
 }
 
-// Lista as categorias do usuário (opcionalmente filtradas por tipo)
+// Lista as categorias da família (opcionalmente filtradas por tipo)
 router.get('/', async (req, res) => {
   try {
-    await ensureCategoriasSeed(req.userId);
+    await ensureCategoriasSeed(req.userId, req.familiaId);
     const { tipo } = req.query;
-    const where = { usuarioId: req.userId };
+    const where = { familiaId: req.familiaId };
     if (tipo) where.tipo = tipo;
 
     const categorias = await prisma.categoria.findMany({ where, orderBy: [{ tipo: 'asc' }, { nome: 'asc' }] });
@@ -51,12 +53,13 @@ router.post('/', async (req, res) => {
     const validationError = validateCategoriaInput(req.body);
     if (validationError) return res.status(400).json({ error: validationError });
 
-    const existing = await prisma.categoria.findFirst({ where: { usuarioId: req.userId, nome: nome.trim(), tipo } });
+    const existing = await prisma.categoria.findFirst({ where: { familiaId: req.familiaId, nome: nome.trim(), tipo } });
     if (existing) return res.status(400).json({ error: 'Já existe uma categoria com esse nome para esse tipo' });
 
     const created = await prisma.categoria.create({
       data: {
         usuarioId: req.userId,
+        familiaId: req.familiaId,
         nome: nome.trim(),
         tipo,
         icone: icone || '💰',
@@ -77,7 +80,7 @@ router.put('/:id', async (req, res) => {
     const id = Number(req.params.id);
     const { nome, icone, cor } = req.body;
 
-    const existing = await prisma.categoria.findFirst({ where: { id, usuarioId: req.userId } });
+    const existing = await prisma.categoria.findFirst({ where: { id, familiaId: req.familiaId } });
     if (!existing) return res.status(404).json({ error: 'Categoria não encontrada' });
 
     const validationError = validateCategoriaInput({ nome, tipo: existing.tipo });
@@ -86,7 +89,7 @@ router.put('/:id', async (req, res) => {
     const novoNome = nome.trim();
     if (novoNome !== existing.nome) {
       const conflito = await prisma.categoria.findFirst({
-        where: { usuarioId: req.userId, nome: novoNome, tipo: existing.tipo, NOT: { id } },
+        where: { familiaId: req.familiaId, nome: novoNome, tipo: existing.tipo, NOT: { id } },
       });
       if (conflito) return res.status(400).json({ error: 'Já existe uma categoria com esse nome para esse tipo' });
     }
@@ -98,9 +101,9 @@ router.put('/:id', async (req, res) => {
       }),
       // Propaga o nome novo pra quem já usa o nome antigo — categoria é texto livre
       // nessas tabelas, não uma foreign key, então isso é o que mantém tudo consistente.
-      prisma.transacao.updateMany({ where: { usuarioId: req.userId, categoria: existing.nome }, data: { categoria: novoNome } }),
-      prisma.recorrencia.updateMany({ where: { usuarioId: req.userId, categoria: existing.nome }, data: { categoria: novoNome } }),
-      prisma.orcamento.updateMany({ where: { usuarioId: req.userId, categoria: existing.nome }, data: { categoria: novoNome } }),
+      prisma.transacao.updateMany({ where: { familiaId: req.familiaId, categoria: existing.nome }, data: { categoria: novoNome } }),
+      prisma.recorrencia.updateMany({ where: { familiaId: req.familiaId, categoria: existing.nome }, data: { categoria: novoNome } }),
+      prisma.orcamento.updateMany({ where: { familiaId: req.familiaId, categoria: existing.nome }, data: { categoria: novoNome } }),
     ]);
 
     res.json(updated);
@@ -114,7 +117,7 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const id = Number(req.params.id);
-    const existing = await prisma.categoria.findFirst({ where: { id, usuarioId: req.userId } });
+    const existing = await prisma.categoria.findFirst({ where: { id, familiaId: req.familiaId } });
     if (!existing) return res.status(404).json({ error: 'Categoria não encontrada' });
 
     await prisma.categoria.delete({ where: { id } });

@@ -15,15 +15,19 @@ async function authMiddleware(req, res, next) {
 
     // Confere que o token ainda corresponde à versão atual do usuário — trocar a
     // senha incrementa tokenVersion, invalidando qualquer token emitido antes disso.
+    // Já aproveita esse mesmo SELECT pra resolver a família atual — sem round-trip extra,
+    // e sempre atualizado (trocar de família não exige logout, diferente de trocar senha).
     const user = await prisma.usuario.findUnique({
       where: { id: decoded.id },
-      select: { tokenVersion: true },
+      select: { tokenVersion: true, familiaId: true, papelFamilia: true },
     });
     if (!user || user.tokenVersion !== decoded.tokenVersion) {
       return res.status(401).json({ error: 'Sessão expirada. Faça login novamente.' });
     }
 
     req.userId = decoded.id;
+    req.familiaId = user.familiaId;
+    req.papelFamilia = user.papelFamilia;
     next();
   } catch {
     res.status(401).json({ error: 'Token inválido ou expirado' });

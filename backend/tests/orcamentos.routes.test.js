@@ -21,8 +21,8 @@ const rawOrcamento = (overrides = {}) => ({
 });
 
 beforeEach(() => {
-  // authMiddleware confere tokenVersion a cada requisição autenticada.
-  vi.spyOn(prisma.usuario, 'findUnique').mockResolvedValue({ tokenVersion: 0 });
+  // authMiddleware confere tokenVersion e resolve a família a cada requisição autenticada.
+  vi.spyOn(prisma.usuario, 'findUnique').mockResolvedValue({ tokenVersion: 0, familiaId: 1, papelFamilia: 'dono' });
 });
 
 afterEach(() => {
@@ -63,10 +63,10 @@ describe('GET /api/orcamentos', () => {
     expect(res.body[0]).toMatchObject({ categoria: 'Alimentação', valorLimite: 800, gasto: 400, percentual: 50, estourado: false });
   });
 
-  it('escopa a busca por usuarioId do token', async () => {
+  it('escopa a busca por familiaId do token', async () => {
     const findSpy = vi.spyOn(prisma.orcamento, 'findMany').mockResolvedValue([]);
     await request(app).get('/api/orcamentos?month=2026-08&usuarioId=999').set('Authorization', `Bearer ${token}`);
-    expect(findSpy.mock.calls[0][0].where.usuarioId).toBe(7);
+    expect(findSpy.mock.calls[0][0].where.familiaId).toBe(1);
   });
 });
 

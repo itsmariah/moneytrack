@@ -42,6 +42,16 @@ export function AuthProvider({ children }) {
     setUser(null)
   }
 
+  // Recarrega os dados do usuário logado (inclusive a família) sem precisar de um novo
+  // login — usado depois de ações que mudam a família ativa (entrar, sair, ser removido)
+  // mas que não passam por /auth/profile.
+  const refreshUser = async () => {
+    const { data } = await api.get('/auth/me')
+    localStorage.setItem('user', JSON.stringify(data))
+    setUser(data)
+    return data
+  }
+
   const updateProfile = async (payload) => {
     const { data } = await api.put('/auth/profile', payload)
     // Trocar a senha invalida o token anterior no backend — quando isso acontece,
@@ -58,7 +68,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, updateProfile }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, updateProfile, refreshUser }}>
       {children}
     </AuthContext.Provider>
   )

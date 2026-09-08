@@ -15,6 +15,9 @@ const TRANSACAO_SELECT_SEM_ANEXO = {
   contaId: true,
   pluggyTransactionId: true,
   anexoNome: true,
+  // Nome de quem lançou — usado no frontend pra mostrar "por Fulano" quando a
+  // transação foi criada por outro membro da família, não pelo usuário logado.
+  usuario: { select: { nome: true } },
 };
 
 module.exports = { TRANSACAO_SELECT_SEM_ANEXO };

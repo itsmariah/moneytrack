@@ -21,11 +21,11 @@ router.use(dataLimiter);
 
 const metaInclude = { aportes: { orderBy: [{ data: 'desc' }, { createdAt: 'desc' }] } };
 
-// Listar metas do usuário
+// Listar metas da família
 router.get('/', async (req, res) => {
   try {
     const metas = await prisma.meta.findMany({
-      where: { usuarioId: req.userId },
+      where: { familiaId: req.familiaId },
       include: metaInclude,
       orderBy: { createdAt: 'desc' },
     });
@@ -46,6 +46,7 @@ router.post('/', async (req, res) => {
     const created = await prisma.meta.create({
       data: {
         usuarioId: req.userId,
+        familiaId: req.familiaId,
         titulo: titulo.trim(),
         valorAlvo: Number(valorAlvo),
         prazo: prazo || null,
@@ -64,7 +65,7 @@ router.put('/:id', async (req, res) => {
     const id = Number(req.params.id);
     const { titulo, valorAlvo, prazo } = req.body;
 
-    const existing = await prisma.meta.findFirst({ where: { id, usuarioId: req.userId } });
+    const existing = await prisma.meta.findFirst({ where: { id, familiaId: req.familiaId } });
     if (!existing) return res.status(404).json({ error: 'Meta não encontrada' });
 
     const validationError = validateMetaInput(req.body);
@@ -85,7 +86,7 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const id = Number(req.params.id);
-    const existing = await prisma.meta.findFirst({ where: { id, usuarioId: req.userId } });
+    const existing = await prisma.meta.findFirst({ where: { id, familiaId: req.familiaId } });
     if (!existing) return res.status(404).json({ error: 'Meta não encontrada' });
 
     await prisma.meta.delete({ where: { id } });
@@ -101,7 +102,7 @@ router.post('/:id/aportes', async (req, res) => {
     const metaId = Number(req.params.id);
     const { valor, data, descricao } = req.body;
 
-    const meta = await prisma.meta.findFirst({ where: { id: metaId, usuarioId: req.userId } });
+    const meta = await prisma.meta.findFirst({ where: { id: metaId, familiaId: req.familiaId } });
     if (!meta) return res.status(404).json({ error: 'Meta não encontrada' });
 
     const validationError = validateAporteInput(req.body);
@@ -124,8 +125,8 @@ router.delete('/:id/aportes/:aporteId', async (req, res) => {
     const metaId = Number(req.params.id);
     const aporteId = Number(req.params.aporteId);
 
-    // Confere posse pela Meta (Aporte não guarda usuarioId próprio) — evita IDOR via aporteId de outro usuário.
-    const aporte = await prisma.aporte.findFirst({ where: { id: aporteId, metaId, meta: { usuarioId: req.userId } } });
+    // Confere posse pela Meta (Aporte não guarda familiaId próprio) — evita IDOR via aporteId de outra família.
+    const aporte = await prisma.aporte.findFirst({ where: { id: aporteId, metaId, meta: { familiaId: req.familiaId } } });
     if (!aporte) return res.status(404).json({ error: 'Aporte não encontrado' });
 
     await prisma.aporte.delete({ where: { id: aporteId } });

@@ -70,6 +70,7 @@ router.post('/conexoes', async (req, res) => {
     const conexao = await prisma.conexaoBancaria.create({
       data: {
         usuarioId: req.userId,
+        familiaId: req.familiaId,
         pluggyItemId,
         nomeConector: item.connector?.name || 'Banco conectado',
         status: item.status,
@@ -84,11 +85,11 @@ router.post('/conexoes', async (req, res) => {
   }
 });
 
-// Lista as conexões bancárias do usuário
+// Lista as conexões bancárias da família
 router.get('/conexoes', async (req, res) => {
   try {
     const conexoes = await prisma.conexaoBancaria.findMany({
-      where: { usuarioId: req.userId },
+      where: { familiaId: req.familiaId },
       orderBy: { createdAt: 'desc' },
       include: { contas: { select: { id: true, nome: true } } },
     });
@@ -110,7 +111,7 @@ router.get('/conexoes', async (req, res) => {
 router.post('/conexoes/:id/sincronizar', async (req, res) => {
   try {
     const id = Number(req.params.id);
-    const conexao = await prisma.conexaoBancaria.findFirst({ where: { id, usuarioId: req.userId } });
+    const conexao = await prisma.conexaoBancaria.findFirst({ where: { id, familiaId: req.familiaId } });
     if (!conexao) return res.status(404).json({ error: 'Conexão não encontrada' });
 
     const resultado = await sincronizarConexao(id);
@@ -125,7 +126,7 @@ router.post('/conexoes/:id/sincronizar', async (req, res) => {
 router.delete('/conexoes/:id', async (req, res) => {
   try {
     const id = Number(req.params.id);
-    const conexao = await prisma.conexaoBancaria.findFirst({ where: { id, usuarioId: req.userId } });
+    const conexao = await prisma.conexaoBancaria.findFirst({ where: { id, familiaId: req.familiaId } });
     if (!conexao) return res.status(404).json({ error: 'Conexão não encontrada' });
 
     await prisma.conexaoBancaria.delete({ where: { id } });

@@ -1,7 +1,7 @@
-// Monta a cláusula `where` do Prisma para listar transações de um usuário, combinando
+// Monta a cláusula `where` do Prisma para listar transações de uma família, combinando
 // os filtros de tipo, categoria, período e busca por texto (descrição ou categoria).
-function buildTransactionWhere(usuarioId, { tipo, categoria, contaId, data_inicio, data_fim, busca } = {}) {
-  const where = { usuarioId };
+function buildTransactionWhere(familiaId, { tipo, categoria, contaId, data_inicio, data_fim, busca } = {}) {
+  const where = { familiaId };
   if (tipo) where.tipo = tipo;
   if (categoria) where.categoria = categoria;
   if (contaId) where.contaId = Number(contaId);

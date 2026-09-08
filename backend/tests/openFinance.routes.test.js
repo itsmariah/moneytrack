@@ -12,8 +12,8 @@ const app = createTestApp();
 const token = makeToken(7);
 
 beforeEach(() => {
-  // authMiddleware confere tokenVersion a cada requisição autenticada.
-  vi.spyOn(prisma.usuario, 'findUnique').mockResolvedValue({ tokenVersion: 0 });
+  // authMiddleware confere tokenVersion e resolve a família a cada requisição autenticada.
+  vi.spyOn(prisma.usuario, 'findUnique').mockResolvedValue({ tokenVersion: 0, familiaId: 1, papelFamilia: 'dono' });
 });
 
 afterEach(() => {
@@ -98,10 +98,10 @@ describe('POST /api/open-finance/conexoes', () => {
 });
 
 describe('GET /api/open-finance/conexoes', () => {
-  it('escopa a busca por usuarioId do token', async () => {
+  it('escopa a busca por familiaId do token', async () => {
     const findSpy = vi.spyOn(prisma.conexaoBancaria, 'findMany').mockResolvedValue([]);
     await request(app).get('/api/open-finance/conexoes?usuarioId=999').set('Authorization', `Bearer ${token}`);
-    expect(findSpy.mock.calls[0][0].where.usuarioId).toBe(7);
+    expect(findSpy.mock.calls[0][0].where.familiaId).toBe(1);
   });
 });
 

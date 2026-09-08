@@ -15,6 +15,7 @@ import Budgets from './pages/Budgets'
 import Recurring from './pages/Recurring'
 import Contas from './pages/Contas'
 import Categorias from './pages/Categorias'
+import Familia from './pages/Familia'
 
 export default function App() {
   return (
@@ -35,6 +36,7 @@ export default function App() {
               <Route path="/recorrencias" element={<PrivateRoute><Recurring /></PrivateRoute>} />
               <Route path="/contas" element={<PrivateRoute><Contas /></PrivateRoute>} />
               <Route path="/categorias" element={<PrivateRoute><Categorias /></PrivateRoute>} />
+              <Route path="/familia" element={<PrivateRoute><Familia /></PrivateRoute>} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </BrowserRouter>

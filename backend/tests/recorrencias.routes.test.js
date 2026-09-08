@@ -28,10 +28,10 @@ const rawRecorrencia = (overrides = {}) => ({
 });
 
 beforeEach(() => {
-  // authMiddleware confere tokenVersion a cada requisição autenticada.
-  vi.spyOn(prisma.usuario, 'findUnique').mockResolvedValue({ tokenVersion: 0 });
-  // contaPertenceAoUsuario: por padrão a conta 1 existe e é do usuário 7.
-  vi.spyOn(prisma.conta, 'findFirst').mockResolvedValue({ id: 1, usuarioId: 7 });
+  // authMiddleware confere tokenVersion e resolve a família a cada requisição autenticada.
+  vi.spyOn(prisma.usuario, 'findUnique').mockResolvedValue({ tokenVersion: 0, familiaId: 1, papelFamilia: 'dono' });
+  // contaPertenceAFamilia: por padrão a conta 1 existe e é da família 1.
+  vi.spyOn(prisma.conta, 'findFirst').mockResolvedValue({ id: 1, familiaId: 1 });
 });
 
 afterEach(() => {
@@ -58,11 +58,11 @@ describe('GET /api/recorrencias', () => {
     expect(res.body[0]).toMatchObject({ categoria: 'Moradia', valor: 1200 });
   });
 
-  it('escopa a busca por usuarioId do token', async () => {
+  it('escopa a busca por familiaId do token', async () => {
     const findSpy = vi.spyOn(prisma.recorrencia, 'findMany').mockResolvedValue([]);
     await request(app).get('/api/recorrencias?usuarioId=999').set('Authorization', `Bearer ${token}`);
-    // Primeira chamada é do ensureOccurrences (usuarioId, ativa: true); confere ali.
-    expect(findSpy.mock.calls[0][0].where.usuarioId).toBe(7);
+    // Primeira chamada é do ensureOccurrences (familiaId, ativa: true); confere ali.
+    expect(findSpy.mock.calls[0][0].where.familiaId).toBe(1);
   });
 });
 

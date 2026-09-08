@@ -2,10 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { defaultCategorias } from './defaultCategorias.js';
 
 describe('defaultCategorias', () => {
-  it('gera categorias de receita e despesa pro usuário informado', () => {
-    const lista = defaultCategorias(7);
+  it('gera categorias de receita e despesa pro usuário/família informados', () => {
+    const lista = defaultCategorias(7, 3);
     expect(lista.length).toBeGreaterThan(0);
     expect(lista.every(c => c.usuarioId === 7)).toBe(true);
+    expect(lista.every(c => c.familiaId === 3)).toBe(true);
     expect(lista.some(c => c.tipo === 'receita')).toBe(true);
     expect(lista.some(c => c.tipo === 'despesa')).toBe(true);
   });

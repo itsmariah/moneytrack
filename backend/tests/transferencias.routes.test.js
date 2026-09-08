@@ -26,8 +26,8 @@ const rawTransferencia = (overrides = {}) => ({
 });
 
 beforeEach(() => {
-  // authMiddleware confere tokenVersion a cada requisição autenticada.
-  vi.spyOn(prisma.usuario, 'findUnique').mockResolvedValue({ tokenVersion: 0 });
+  // authMiddleware confere tokenVersion e resolve a família a cada requisição autenticada.
+  vi.spyOn(prisma.usuario, 'findUnique').mockResolvedValue({ tokenVersion: 0, familiaId: 1, papelFamilia: 'dono' });
 });
 
 afterEach(() => {
@@ -49,10 +49,10 @@ describe('GET /api/transferencias', () => {
     expect(res.body[0]).toMatchObject({ contaOrigemNome: 'Nubank', contaDestinoNome: 'Cartão', valor: 300 });
   });
 
-  it('escopa a busca por usuarioId do token', async () => {
+  it('escopa a busca por familiaId do token', async () => {
     const findSpy = vi.spyOn(prisma.transferencia, 'findMany').mockResolvedValue([]);
     await request(app).get('/api/transferencias?usuarioId=999').set('Authorization', `Bearer ${token}`);
-    expect(findSpy.mock.calls[0][0].where.usuarioId).toBe(7);
+    expect(findSpy.mock.calls[0][0].where.familiaId).toBe(1);
   });
 });
 
