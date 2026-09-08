@@ -10,6 +10,7 @@ const TRANSACAO_SELECT_SEM_ANEXO = {
   descricao: true,
   data: true,
   createdAt: true,
+  updatedAt: true,
   recorrenciaId: true,
   contaId: true,
   pluggyTransactionId: true,

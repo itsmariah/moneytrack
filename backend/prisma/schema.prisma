@@ -55,6 +55,9 @@ model Transacao {
   descricao     String       @default("")
   data          String
   createdAt     DateTime     @default(now())
+  // Atualizado automaticamente pelo Prisma em todo update() — usado só pra sinalizar "editada"
+  // na lista; o que mudou de fato fica no histórico (TransacaoHistorico).
+  updatedAt     DateTime     @default(now()) @updatedAt
   usuario       Usuario      @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   recorrenciaId Int?
   // SetNull (não Cascade): apagar a regra de recorrência não deve apagar o histórico
@@ -69,6 +72,18 @@ model Transacao {
   // de listagem/export (só via GET /transactions/:id/anexo), pra não pesar a paginação.
   anexo     String?
   anexoNome String?
+  historico TransacaoHistorico[]
+}
+
+// Um registro por edição que muda pelo menos um campo financeiro (tipo/valor/categoria/
+// descricao/data/contaId) — não registra troca de anexo, pra não guardar base64 no histórico.
+// "alteracoes" é a lista de { campo, de, para } daquela edição específica.
+model TransacaoHistorico {
+  id          Int       @id @default(autoincrement())
+  transacaoId Int
+  transacao   Transacao @relation(fields: [transacaoId], references: [id], onDelete: Cascade)
+  alteracoes  Json
+  createdAt   DateTime  @default(now())
 }
 
 // Conta/carteira do usuário (conta corrente, cartão, dinheiro em espécie...). saldoInicial

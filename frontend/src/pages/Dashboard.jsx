@@ -6,6 +6,7 @@ import SummaryCards from '../components/SummaryCards'
 import TransactionModal from '../components/TransactionModal'
 import TransactionList from '../components/TransactionList'
 import AnexoViewer from '../components/AnexoViewer'
+import HistoricoViewer from '../components/HistoricoViewer'
 import ExpensePieChart from '../components/charts/ExpensePieChart'
 import OFXImportModal from '../components/OFXImportModal'
 import InsightsPanel from '../components/InsightsPanel'
@@ -39,6 +40,7 @@ export default function Dashboard() {
   const [deleteId, setDeleteId] = useState(null)
   const [exporting, setExporting] = useState(false)
   const [anexoTransactionId, setAnexoTransactionId] = useState(null)
+  const [historicoTransactionId, setHistoricoTransactionId] = useState(null)
 
   useEffect(() => {
     if (!toast) return
@@ -276,6 +278,7 @@ export default function Dashboard() {
                   onEdit={handleEdit}
                   onDelete={handleDelete}
                   onViewAnexo={(t) => setAnexoTransactionId(t.id)}
+                  onViewHistorico={(t) => setHistoricoTransactionId(t.id)}
                   hasFilters={hasFilters}
                   onCreateClick={() => setShowModal(true)}
                 />
@@ -346,6 +349,10 @@ export default function Dashboard() {
 
       {anexoTransactionId !== null && (
         <AnexoViewer transactionId={anexoTransactionId} onClose={() => setAnexoTransactionId(null)} />
+      )}
+
+      {historicoTransactionId !== null && (
+        <HistoricoViewer transactionId={historicoTransactionId} contas={contas} onClose={() => setHistoricoTransactionId(null)} />
       )}
 
       {toast && <div className="toast" role="status">{toast}</div>}

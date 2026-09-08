@@ -10,6 +10,7 @@ const { buildTransactionWhere } = require('../utils/buildTransactionWhere');
 const { buildTransactionsCsv } = require('../utils/csvExport');
 const { ensureOccurrences } = require('../utils/materializeRecorrencias');
 const { TRANSACAO_SELECT_SEM_ANEXO } = require('../utils/transactionSelect');
+const { buildTransactionDiff } = require('../utils/buildTransactionDiff');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -179,11 +180,19 @@ router.put('/:id', async (req, res) => {
     // anexo === undefined -> campo nem foi enviado, mantém o anexo existente sem tocar.
     const anexoData = anexo === undefined ? {} : { anexo, anexoNome: anexo ? anexoNome : null };
 
-    const updated = await prisma.transacao.update({
-      where: { id },
-      data: { tipo, valor: Number(valor), categoria, descricao: descricao || '', data, contaId: Number(contaId), ...anexoData },
-      select: TRANSACAO_SELECT_SEM_ANEXO,
-    });
+    const novosValores = { tipo, valor: Number(valor), categoria, descricao: descricao || '', data, contaId: Number(contaId) };
+    const alteracoes = buildTransactionDiff(existing, novosValores);
+
+    const [updated] = await prisma.$transaction([
+      prisma.transacao.update({
+        where: { id },
+        data: { ...novosValores, ...anexoData },
+        select: TRANSACAO_SELECT_SEM_ANEXO,
+      }),
+      ...(alteracoes.length > 0
+        ? [prisma.transacaoHistorico.create({ data: { transacaoId: id, alteracoes } })]
+        : []),
+    ]);
     res.json(serializeTransaction(updated));
   } catch (err) {
     res.status(500).json({ error: 'Erro ao atualizar transação' });
@@ -204,6 +213,23 @@ router.get('/:id/anexo', async (req, res) => {
     res.json(transacao);
   } catch (err) {
     res.status(500).json({ error: 'Erro ao buscar anexo' });
+  }
+});
+
+// Histórico de edições financeiras da transação (o que mudou e quando), mais recente primeiro.
+router.get('/:id/historico', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const transacao = await prisma.transacao.findFirst({ where: { id, usuarioId: req.userId }, select: { id: true } });
+    if (!transacao) return res.status(404).json({ error: 'Transação não encontrada' });
+
+    const historico = await prisma.transacaoHistorico.findMany({
+      where: { transacaoId: id },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(historico);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar histórico' });
   }
 });
 

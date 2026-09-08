@@ -19,6 +19,10 @@ beforeEach(() => {
   vi.spyOn(prisma.recorrencia, 'findMany').mockResolvedValue([]);
   // contaPertenceAoUsuario: por padrão a conta 1 existe e é do usuário 7.
   vi.spyOn(prisma.conta, 'findFirst').mockResolvedValue({ id: 1, usuarioId: 7 });
+  // PUT roda update + (opcionalmente) criação de histórico dentro de $transaction — como
+  // nos outros arquivos de teste, simulamos rodando as duas promises com Promise.all.
+  vi.spyOn(prisma, '$transaction').mockImplementation((arr) => Promise.all(arr));
+  vi.spyOn(prisma.transacaoHistorico, 'create').mockResolvedValue({});
 });
 
 afterEach(() => {
@@ -185,6 +189,81 @@ describe('PUT /api/transactions/:id', () => {
 
     expect(updateSpy.mock.calls[0][0].data.anexo).toBeNull();
     expect(updateSpy.mock.calls[0][0].data.anexoNome).toBeNull();
+  });
+
+  it('não cria histórico quando nenhum campo financeiro muda', async () => {
+    const existente = { id: 5, usuarioId: 7, tipo: 'receita', valor: new Prisma.Decimal('100.00'), categoria: 'Salário', descricao: '', data: '2026-08-10', contaId: 1 };
+    vi.spyOn(prisma.transacao, 'findFirst').mockResolvedValue(existente);
+    vi.spyOn(prisma.transacao, 'update').mockResolvedValue(existente);
+    const historicoSpy = vi.spyOn(prisma.transacaoHistorico, 'create');
+
+    await request(app)
+      .put('/api/transactions/5')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ tipo: 'receita', valor: 100, categoria: 'Salário', data: '2026-08-10', contaId: 1 });
+
+    expect(historicoSpy).not.toHaveBeenCalled();
+  });
+
+  it('cria uma entrada de histórico com o que mudou quando um campo financeiro é editado', async () => {
+    const existente = { id: 5, usuarioId: 7, tipo: 'receita', valor: new Prisma.Decimal('100.00'), categoria: 'Salário', descricao: '', data: '2026-08-10', contaId: 1 };
+    vi.spyOn(prisma.transacao, 'findFirst').mockResolvedValue(existente);
+    vi.spyOn(prisma.transacao, 'update').mockResolvedValue({ ...existente, valor: new Prisma.Decimal('150.00'), categoria: 'Freelance' });
+    const historicoSpy = vi.spyOn(prisma.transacaoHistorico, 'create').mockResolvedValue({});
+
+    await request(app)
+      .put('/api/transactions/5')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ tipo: 'receita', valor: 150, categoria: 'Freelance', data: '2026-08-10', contaId: 1 });
+
+    expect(historicoSpy).toHaveBeenCalledTimes(1);
+    expect(historicoSpy.mock.calls[0][0].data.transacaoId).toBe(5);
+    expect(historicoSpy.mock.calls[0][0].data.alteracoes).toEqual([
+      { campo: 'valor', de: 100, para: 150 },
+      { campo: 'categoria', de: 'Salário', para: 'Freelance' },
+    ]);
+  });
+
+  it('não registra troca de anexo no histórico financeiro', async () => {
+    const existente = { id: 5, usuarioId: 7, tipo: 'receita', valor: new Prisma.Decimal('100.00'), categoria: 'Salário', descricao: '', data: '2026-08-10', contaId: 1 };
+    vi.spyOn(prisma.transacao, 'findFirst').mockResolvedValue(existente);
+    vi.spyOn(prisma.transacao, 'update').mockResolvedValue(existente);
+    const historicoSpy = vi.spyOn(prisma.transacaoHistorico, 'create');
+
+    await request(app)
+      .put('/api/transactions/5')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ tipo: 'receita', valor: 100, categoria: 'Salário', data: '2026-08-10', contaId: 1, anexo: 'data:image/png;base64,AAAA', anexoNome: 'a.png' });
+
+    expect(historicoSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('GET /api/transactions/:id/historico', () => {
+  it('retorna 404 quando a transação não é do usuário', async () => {
+    vi.spyOn(prisma.transacao, 'findFirst').mockResolvedValue(null);
+
+    const res = await request(app)
+      .get('/api/transactions/5/historico')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(404);
+  });
+
+  it('retorna a lista de edições, mais recente primeiro', async () => {
+    vi.spyOn(prisma.transacao, 'findFirst').mockResolvedValue({ id: 5 });
+    const findManySpy = vi.spyOn(prisma.transacaoHistorico, 'findMany').mockResolvedValue([
+      { id: 2, transacaoId: 5, alteracoes: [{ campo: 'valor', de: 100, para: 150 }], createdAt: new Date('2026-08-12') },
+      { id: 1, transacaoId: 5, alteracoes: [{ campo: 'categoria', de: 'Lazer', para: 'Saúde' }], createdAt: new Date('2026-08-10') },
+    ]);
+
+    const res = await request(app)
+      .get('/api/transactions/5/historico')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(2);
+    expect(findManySpy.mock.calls[0][0]).toMatchObject({ where: { transacaoId: 5 }, orderBy: { createdAt: 'desc' } });
   });
 });
 

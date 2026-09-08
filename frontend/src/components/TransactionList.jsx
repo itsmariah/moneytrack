@@ -1,6 +1,13 @@
 import { fmt, fmtDate } from '../utils/format'
 
-export default function TransactionList({ transactions, onEdit, onDelete, onViewAnexo, hasFilters, onCreateClick }) {
+// updatedAt e createdAt vêm do mesmo INSERT (mesmo now() do Postgres), mas usamos uma
+// margem pra não depender de igualdade exata de timestamp entre as duas colunas.
+function foiEditada(t) {
+  if (!t.createdAt || !t.updatedAt) return false
+  return new Date(t.updatedAt).getTime() - new Date(t.createdAt).getTime() > 1000
+}
+
+export default function TransactionList({ transactions, onEdit, onDelete, onViewAnexo, onViewHistorico, hasFilters, onCreateClick }) {
   if (transactions.length === 0) {
     if (hasFilters) {
       return (
@@ -44,6 +51,16 @@ export default function TransactionList({ transactions, onEdit, onDelete, onView
                   title={`Ver comprovante: ${t.anexoNome}`}
                 >
                   📎
+                </button>
+              )}
+              {foiEditada(t) && (
+                <button
+                  type="button"
+                  className="tx-anexo-btn"
+                  onClick={() => onViewHistorico(t)}
+                  title="Ver histórico de edições"
+                >
+                  🕓
                 </button>
               )}
             </span>
