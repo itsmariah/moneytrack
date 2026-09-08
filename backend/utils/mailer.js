@@ -23,4 +23,21 @@ async function sendPasswordResetEmail(to, resetUrl) {
   });
 }
 
-module.exports = { sendPasswordResetEmail };
+async function sendOrcamentoEstouradoEmail(to, { categoria, valorLimite, gasto, mes }) {
+  const fmtBRL = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+  const [ano, mesNum] = mes.split('-').map(Number);
+  const mesLabel = new Date(ano, mesNum - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+  await transporter.sendMail({
+    from: process.env.EMAIL_FROM || process.env.SMTP_USER,
+    to,
+    subject: `MoneyTrack — Orçamento de ${categoria} estourado`,
+    html: `
+      <p>Seu orçamento de <strong>${categoria}</strong> em ${mesLabel} foi ultrapassado.</p>
+      <p>Limite: ${fmtBRL(valorLimite)}<br>Gasto até agora: ${fmtBRL(gasto)}</p>
+      <p>Você pode revisar seus orçamentos a qualquer momento no MoneyTrack.</p>
+    `,
+  });
+}
+
+module.exports = { sendPasswordResetEmail, sendOrcamentoEstouradoEmail };

@@ -11,6 +11,16 @@ const { buildTransactionsCsv } = require('../utils/csvExport');
 const { ensureOccurrences } = require('../utils/materializeRecorrencias');
 const { TRANSACAO_SELECT_SEM_ANEXO } = require('../utils/transactionSelect');
 const { buildTransactionDiff } = require('../utils/buildTransactionDiff');
+const { notifyOrcamentoEstouradoSeNecessario } = require('../utils/notifyOrcamentoEstourado');
+
+// Fire-and-forget (mesmo padrão do e-mail de reset de senha em auth.js): a resposta da
+// rota não deve esperar o envio de e-mail, e uma falha aqui não pode derrubar a requisição.
+function dispararAvisoOrcamentoSeDespesa(usuarioId, transacao) {
+  if (transacao.tipo !== 'despesa') return;
+  notifyOrcamentoEstouradoSeNecessario(usuarioId, transacao.categoria, transacao.data).catch(err => {
+    console.error('Erro ao verificar orçamento estourado:', err.message);
+  });
+}
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -156,6 +166,7 @@ router.post('/', async (req, res) => {
       },
       select: TRANSACAO_SELECT_SEM_ANEXO,
     });
+    dispararAvisoOrcamentoSeDespesa(req.userId, created);
     res.status(201).json(serializeTransaction(created));
   } catch (err) {
     res.status(500).json({ error: 'Erro ao criar transação' });
@@ -193,6 +204,7 @@ router.put('/:id', async (req, res) => {
         ? [prisma.transacaoHistorico.create({ data: { transacaoId: id, alteracoes } })]
         : []),
     ]);
+    dispararAvisoOrcamentoSeDespesa(req.userId, updated);
     res.json(serializeTransaction(updated));
   } catch (err) {
     res.status(500).json({ error: 'Erro ao atualizar transação' });

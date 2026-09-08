@@ -23,7 +23,15 @@ beforeEach(() => {
   // nos outros arquivos de teste, simulamos rodando as duas promises com Promise.all.
   vi.spyOn(prisma, '$transaction').mockImplementation((arr) => Promise.all(arr));
   vi.spyOn(prisma.transacaoHistorico, 'create').mockResolvedValue({});
+  // POST/PUT de despesa dispara (fire-and-forget) a checagem de orçamento estourado — sem
+  // orçamento cadastrado por padrão, ela retorna cedo sem tocar em mais nada (aggregate,
+  // e-mail...). Testes específicos abaixo sobrescrevem isso pra exercitar o fluxo completo.
+  vi.spyOn(prisma.orcamento, 'findUnique').mockResolvedValue(null);
 });
+
+// O disparo do aviso de orçamento é fire-and-forget (a rota não espera): dá um respiro
+// pro event loop rodar as promises pendentes antes de fazer asserções sobre elas.
+const flushPromises = () => new Promise(resolve => setImmediate(resolve));
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -129,6 +137,37 @@ describe('POST /api/transactions', () => {
 
     expect(res.status).toBe(400);
     expect(createSpy).not.toHaveBeenCalled();
+  });
+
+  it('verifica orçamento estourado após criar uma despesa (fire-and-forget)', async () => {
+    vi.spyOn(prisma.transacao, 'create').mockResolvedValue({
+      id: 12, usuarioId: 7, tipo: 'despesa', valor: new Prisma.Decimal('50.00'), categoria: 'Lazer', descricao: '', data: '2026-09-05',
+    });
+    const orcamentoSpy = vi.spyOn(prisma.orcamento, 'findUnique').mockResolvedValue({ id: 1, valorLimite: new Prisma.Decimal('100.00'), ultimaNotificacaoMes: null });
+    vi.spyOn(prisma.transacao, 'aggregate').mockResolvedValue({ _sum: { valor: new Prisma.Decimal('50.00') } });
+
+    await request(app)
+      .post('/api/transactions')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ tipo: 'despesa', valor: 50, categoria: 'Lazer', data: '2026-09-05', contaId: 1 });
+    await flushPromises();
+
+    expect(orcamentoSpy).toHaveBeenCalledWith({ where: { usuarioId_categoria: { usuarioId: 7, categoria: 'Lazer' } } });
+  });
+
+  it('não verifica orçamento ao criar uma receita', async () => {
+    vi.spyOn(prisma.transacao, 'create').mockResolvedValue({
+      id: 13, usuarioId: 7, tipo: 'receita', valor: new Prisma.Decimal('50.00'), categoria: 'Salário', descricao: '', data: '2026-09-05',
+    });
+    const orcamentoSpy = vi.spyOn(prisma.orcamento, 'findUnique');
+
+    await request(app)
+      .post('/api/transactions')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ tipo: 'receita', valor: 50, categoria: 'Salário', data: '2026-09-05', contaId: 1 });
+    await flushPromises();
+
+    expect(orcamentoSpy).not.toHaveBeenCalled();
   });
 });
 

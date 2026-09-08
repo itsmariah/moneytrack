@@ -197,6 +197,9 @@ model Orcamento {
   valorLimite Decimal  @db.Decimal(12, 2)
   createdAt   DateTime @default(now())
   usuario     Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  // Mês (YYYY-MM) do último aviso de orçamento estourado já enviado por e-mail — evita
+  // mandar um e-mail novo a cada transação que continua estourando o mesmo orçamento no mês.
+  ultimaNotificacaoMes String?
 
   @@unique([usuarioId, categoria])
 }
