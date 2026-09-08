@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import api from '../services/api'
 import { useCategorias } from '../context/CategoriasContext'
+import { processAnexoFile } from '../utils/anexoFile'
 import Modal from './Modal'
 import Alert from './Alert'
+import AnexoViewer from './AnexoViewer'
 
 // new Date().toISOString() é UTC — perto da meia-noite no Brasil (UTC-3) isso adianta
 // a data em um dia. Aqui montamos a data local manualmente para evitar esse desvio.
@@ -27,6 +29,13 @@ export default function TransactionModal({ transaction, contas, onClose, onSaved
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  const [anexoAtualNome, setAnexoAtualNome] = useState(transaction?.anexoNome || null)
+  const [novoAnexo, setNovoAnexo] = useState(null) // { dataUrl, nome } | null
+  const [anexoRemovido, setAnexoRemovido] = useState(false)
+  const [anexoError, setAnexoError] = useState('')
+  const [showAnexoViewer, setShowAnexoViewer] = useState(false)
+  const anexoInputRef = useRef(null)
+
   useEffect(() => {
     if (transaction) {
       const cats = categoriasPorTipo(transaction.tipo)
@@ -40,6 +49,7 @@ export default function TransactionModal({ transaction, contas, onClose, onSaved
         contaId: transaction.contaId,
       })
       setCustomCategoria(isCustom ? transaction.categoria : '')
+      setAnexoAtualNome(transaction.anexoNome || null)
     }
   }, [transaction])
 
@@ -52,6 +62,28 @@ export default function TransactionModal({ transaction, contas, onClose, onSaved
     }
   }, [form.tipo])
 
+  const handleAnexoChange = async (e) => {
+    const file = e.target.files[0]
+    e.target.value = ''
+    if (!file) return
+    try {
+      setAnexoError('')
+      const dataUrl = await processAnexoFile(file)
+      setNovoAnexo({ dataUrl, nome: file.name })
+      setAnexoRemovido(false)
+    } catch (err) {
+      setAnexoError(err.message || 'Não foi possível processar o arquivo')
+    }
+  }
+
+  const handleRemoveAnexo = () => {
+    setNovoAnexo(null)
+    setAnexoRemovido(true)
+  }
+
+  const anexoNomeExibido = novoAnexo ? novoAnexo.nome : (anexoRemovido ? null : anexoAtualNome)
+  const podeVerAnexoAtual = Boolean(transaction) && Boolean(anexoAtualNome) && !novoAnexo && !anexoRemovido
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
@@ -63,6 +95,12 @@ export default function TransactionModal({ transaction, contas, onClose, onSaved
     setLoading(true)
     try {
       const payload = { ...form, categoria }
+      if (novoAnexo) {
+        payload.anexo = novoAnexo.dataUrl
+        payload.anexoNome = novoAnexo.nome
+      } else if (anexoRemovido) {
+        payload.anexo = null
+      }
       if (transaction) {
         await api.put(`/transactions/${transaction.id}`, payload)
       } else {
@@ -178,6 +216,35 @@ export default function TransactionModal({ transaction, contas, onClose, onSaved
             />
           </div>
 
+          <div className="form-group">
+            <label htmlFor="tx-anexo">Comprovante (opcional)</label>
+            {anexoError && <Alert type="error">{anexoError}</Alert>}
+            {anexoNomeExibido ? (
+              <div className="anexo-field">
+                <span className="anexo-field-nome" title={anexoNomeExibido}>📎 {anexoNomeExibido}</span>
+                <div className="anexo-field-actions">
+                  {podeVerAnexoAtual && (
+                    <button type="button" className="btn btn-sm btn-outline" onClick={() => setShowAnexoViewer(true)}>Ver</button>
+                  )}
+                  <button type="button" className="btn btn-sm btn-outline" onClick={() => anexoInputRef.current?.click()}>Trocar</button>
+                  <button type="button" className="btn btn-sm btn-outline" onClick={handleRemoveAnexo}>Remover</button>
+                </div>
+              </div>
+            ) : (
+              <button type="button" className="btn btn-outline btn-sm" onClick={() => anexoInputRef.current?.click()}>
+                Anexar comprovante
+              </button>
+            )}
+            <input
+              id="tx-anexo"
+              ref={anexoInputRef}
+              type="file"
+              accept="image/*,application/pdf"
+              onChange={handleAnexoChange}
+              hidden
+            />
+          </div>
+
           <div className="modal-footer">
             <button type="button" className="btn btn-outline" onClick={onClose}>Cancelar</button>
             <button type="submit" className="btn btn-primary" disabled={loading}>
@@ -185,6 +252,10 @@ export default function TransactionModal({ transaction, contas, onClose, onSaved
             </button>
           </div>
         </form>
+
+      {showAnexoViewer && (
+        <AnexoViewer transactionId={transaction.id} onClose={() => setShowAnexoViewer(false)} />
+      )}
     </Modal>
   )
 }

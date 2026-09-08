@@ -99,6 +99,33 @@ describe('POST /api/transactions', () => {
     expect(res.status).toBe(400);
     expect(createSpy).not.toHaveBeenCalled();
   });
+
+  it('salva o anexo (data URL + nome) quando enviado', async () => {
+    const createSpy = vi.spyOn(prisma.transacao, 'create').mockResolvedValue({
+      id: 11, usuarioId: 7, tipo: 'despesa', valor: new Prisma.Decimal('50.00'), categoria: 'Lazer', descricao: '', data: '2026-08-10', anexoNome: 'nota.png',
+    });
+
+    const res = await request(app)
+      .post('/api/transactions')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ tipo: 'despesa', valor: 50, categoria: 'Lazer', data: '2026-08-10', contaId: 1, anexo: 'data:image/png;base64,AAAA', anexoNome: 'nota.png' });
+
+    expect(res.status).toBe(201);
+    expect(createSpy.mock.calls[0][0].data.anexo).toBe('data:image/png;base64,AAAA');
+    expect(createSpy.mock.calls[0][0].data.anexoNome).toBe('nota.png');
+  });
+
+  it('rejeita anexo em formato inválido (400)', async () => {
+    const createSpy = vi.spyOn(prisma.transacao, 'create');
+
+    const res = await request(app)
+      .post('/api/transactions')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ tipo: 'despesa', valor: 50, categoria: 'Lazer', data: '2026-08-10', contaId: 1, anexo: 'não-é-data-url', anexoNome: 'a.png' });
+
+    expect(res.status).toBe(400);
+    expect(createSpy).not.toHaveBeenCalled();
+  });
 });
 
 describe('PUT /api/transactions/:id', () => {
@@ -128,6 +155,69 @@ describe('PUT /api/transactions/:id', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.valor).toBe(100);
+  });
+
+  it('não mexe no anexo existente quando o campo não é enviado', async () => {
+    vi.spyOn(prisma.transacao, 'findFirst').mockResolvedValue({ id: 5, usuarioId: 7 });
+    const updateSpy = vi.spyOn(prisma.transacao, 'update').mockResolvedValue({
+      id: 5, usuarioId: 7, tipo: 'receita', valor: new Prisma.Decimal('100.00'), categoria: 'Salário', descricao: '', data: '2026-08-10',
+    });
+
+    await request(app)
+      .put('/api/transactions/5')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ tipo: 'receita', valor: 100, categoria: 'Salário', data: '2026-08-10', contaId: 1 });
+
+    expect(updateSpy.mock.calls[0][0].data).not.toHaveProperty('anexo');
+    expect(updateSpy.mock.calls[0][0].data).not.toHaveProperty('anexoNome');
+  });
+
+  it('remove o anexo quando enviado explicitamente como null', async () => {
+    vi.spyOn(prisma.transacao, 'findFirst').mockResolvedValue({ id: 5, usuarioId: 7 });
+    const updateSpy = vi.spyOn(prisma.transacao, 'update').mockResolvedValue({
+      id: 5, usuarioId: 7, tipo: 'receita', valor: new Prisma.Decimal('100.00'), categoria: 'Salário', descricao: '', data: '2026-08-10',
+    });
+
+    await request(app)
+      .put('/api/transactions/5')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ tipo: 'receita', valor: 100, categoria: 'Salário', data: '2026-08-10', contaId: 1, anexo: null });
+
+    expect(updateSpy.mock.calls[0][0].data.anexo).toBeNull();
+    expect(updateSpy.mock.calls[0][0].data.anexoNome).toBeNull();
+  });
+});
+
+describe('GET /api/transactions/:id/anexo', () => {
+  it('retorna 404 quando a transação não é do usuário', async () => {
+    vi.spyOn(prisma.transacao, 'findFirst').mockResolvedValue(null);
+
+    const res = await request(app)
+      .get('/api/transactions/5/anexo')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(404);
+  });
+
+  it('retorna 404 quando a transação não tem anexo', async () => {
+    vi.spyOn(prisma.transacao, 'findFirst').mockResolvedValue({ anexo: null, anexoNome: null });
+
+    const res = await request(app)
+      .get('/api/transactions/5/anexo')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(404);
+  });
+
+  it('retorna o anexo completo quando existe', async () => {
+    vi.spyOn(prisma.transacao, 'findFirst').mockResolvedValue({ anexo: 'data:image/png;base64,AAAA', anexoNome: 'nota.png' });
+
+    const res = await request(app)
+      .get('/api/transactions/5/anexo')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ anexo: 'data:image/png;base64,AAAA', anexoNome: 'nota.png' });
   });
 });
 

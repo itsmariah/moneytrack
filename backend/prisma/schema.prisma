@@ -65,6 +65,10 @@ model Transacao {
   // Preenchido só em transações vindas de sincronização Open Finance — usado pra nunca
   // importar a mesma transação duas vezes num novo sync (upsert idempotente).
   pluggyTransactionId String? @unique
+  // Comprovante anexado (data URL base64, imagem ou PDF) — nunca incluído nas consultas
+  // de listagem/export (só via GET /transactions/:id/anexo), pra não pesar a paginação.
+  anexo     String?
+  anexoNome String?
 }
 
 // Conta/carteira do usuário (conta corrente, cartão, dinheiro em espécie...). saldoInicial

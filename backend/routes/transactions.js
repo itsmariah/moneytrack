@@ -3,11 +3,13 @@ const rateLimit = require('express-rate-limit');
 const prisma = require('../database/db');
 const authMiddleware = require('../middleware/auth');
 const { validateTransactionInput } = require('../utils/validateTransaction');
+const { validateAnexoInput } = require('../utils/validateAnexo');
 const { parsePagination, buildPaginationMeta } = require('../utils/pagination');
 const { serializeTransaction, serializeTransactions } = require('../utils/serializeTransaction');
 const { buildTransactionWhere } = require('../utils/buildTransactionWhere');
 const { buildTransactionsCsv } = require('../utils/csvExport');
 const { ensureOccurrences } = require('../utils/materializeRecorrencias');
+const { TRANSACAO_SELECT_SEM_ANEXO } = require('../utils/transactionSelect');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -59,6 +61,7 @@ router.get('/', async (req, res) => {
     const [rawTransactions, total] = await Promise.all([
       prisma.transacao.findMany({
         where,
+        select: TRANSACAO_SELECT_SEM_ANEXO,
         orderBy: [{ data: 'desc' }, { createdAt: 'desc' }],
         skip,
         take: pageSize,
@@ -80,6 +83,7 @@ router.get('/export', async (req, res) => {
 
     const rawTransactions = await prisma.transacao.findMany({
       where,
+      select: TRANSACAO_SELECT_SEM_ANEXO,
       orderBy: [{ data: 'desc' }, { createdAt: 'desc' }],
     });
 
@@ -129,9 +133,9 @@ router.post('/bulk', bulkImportLimiter, async (req, res) => {
 // RF04/RF05 - Cadastrar receita ou despesa
 router.post('/', async (req, res) => {
   try {
-    const { tipo, valor, categoria, descricao, data, contaId } = req.body;
+    const { tipo, valor, categoria, descricao, data, contaId, anexo, anexoNome } = req.body;
 
-    const validationError = validateTransactionInput(req.body);
+    const validationError = validateTransactionInput(req.body) || validateAnexoInput(req.body);
     if (validationError) return res.status(400).json({ error: validationError });
     if (!(await contaPertenceAoUsuario(req.userId, contaId))) {
       return res.status(400).json({ error: 'Conta inválida' });
@@ -146,7 +150,10 @@ router.post('/', async (req, res) => {
         categoria,
         descricao: descricao || '',
         data,
+        anexo: anexo || null,
+        anexoNome: anexo ? anexoNome : null,
       },
+      select: TRANSACAO_SELECT_SEM_ANEXO,
     });
     res.status(201).json(serializeTransaction(created));
   } catch (err) {
@@ -158,24 +165,45 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const id = Number(req.params.id);
-    const { tipo, valor, categoria, descricao, data, contaId } = req.body;
+    const { tipo, valor, categoria, descricao, data, contaId, anexo, anexoNome } = req.body;
 
     const existing = await prisma.transacao.findFirst({ where: { id, usuarioId: req.userId } });
     if (!existing) return res.status(404).json({ error: 'Transação não encontrada' });
 
-    const validationError = validateTransactionInput(req.body);
+    const validationError = validateTransactionInput(req.body) || validateAnexoInput(req.body);
     if (validationError) return res.status(400).json({ error: validationError });
     if (!(await contaPertenceAoUsuario(req.userId, contaId))) {
       return res.status(400).json({ error: 'Conta inválida' });
     }
 
+    // anexo === undefined -> campo nem foi enviado, mantém o anexo existente sem tocar.
+    const anexoData = anexo === undefined ? {} : { anexo, anexoNome: anexo ? anexoNome : null };
+
     const updated = await prisma.transacao.update({
       where: { id },
-      data: { tipo, valor: Number(valor), categoria, descricao: descricao || '', data, contaId: Number(contaId) },
+      data: { tipo, valor: Number(valor), categoria, descricao: descricao || '', data, contaId: Number(contaId), ...anexoData },
+      select: TRANSACAO_SELECT_SEM_ANEXO,
     });
     res.json(serializeTransaction(updated));
   } catch (err) {
     res.status(500).json({ error: 'Erro ao atualizar transação' });
+  }
+});
+
+// Busca o anexo completo (base64) de uma transação — separado da listagem/edição pra não
+// pesar a paginação com blobs de imagem/PDF que a maioria das telas nunca precisa exibir.
+router.get('/:id/anexo', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const transacao = await prisma.transacao.findFirst({
+      where: { id, usuarioId: req.userId },
+      select: { anexo: true, anexoNome: true },
+    });
+    if (!transacao) return res.status(404).json({ error: 'Transação não encontrada' });
+    if (!transacao.anexo) return res.status(404).json({ error: 'Esta transação não tem anexo' });
+    res.json(transacao);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar anexo' });
   }
 });
 

@@ -14,6 +14,7 @@ const { serializeTransactions } = require('../utils/serializeTransaction');
 const { generateInsights } = require('../utils/generateInsights');
 const { futureOccurrenceThisMonth, projectBalance } = require('../utils/projectBalance');
 const { ensureOccurrences } = require('../utils/materializeRecorrencias');
+const { TRANSACAO_SELECT_SEM_ANEXO } = require('../utils/transactionSelect');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -69,6 +70,7 @@ router.get('/monthly', async (req, res) => {
         usuarioId: req.userId,
         data: { gte: start, lte: end },
       },
+      select: TRANSACAO_SELECT_SEM_ANEXO,
       orderBy: { data: 'asc' },
     });
 

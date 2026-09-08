@@ -5,6 +5,7 @@ import Navbar from '../components/Navbar'
 import SummaryCards from '../components/SummaryCards'
 import TransactionModal from '../components/TransactionModal'
 import TransactionList from '../components/TransactionList'
+import AnexoViewer from '../components/AnexoViewer'
 import ExpensePieChart from '../components/charts/ExpensePieChart'
 import OFXImportModal from '../components/OFXImportModal'
 import InsightsPanel from '../components/InsightsPanel'
@@ -37,6 +38,7 @@ export default function Dashboard() {
   const [toast, setToast] = useState('')
   const [deleteId, setDeleteId] = useState(null)
   const [exporting, setExporting] = useState(false)
+  const [anexoTransactionId, setAnexoTransactionId] = useState(null)
 
   useEffect(() => {
     if (!toast) return
@@ -273,6 +275,7 @@ export default function Dashboard() {
                   transactions={transactions}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
+                  onViewAnexo={(t) => setAnexoTransactionId(t.id)}
                   hasFilters={hasFilters}
                   onCreateClick={() => setShowModal(true)}
                 />
@@ -339,6 +342,10 @@ export default function Dashboard() {
           onConfirm={confirmDelete}
           onCancel={() => setDeleteId(null)}
         />
+      )}
+
+      {anexoTransactionId !== null && (
+        <AnexoViewer transactionId={anexoTransactionId} onClose={() => setAnexoTransactionId(null)} />
       )}
 
       {toast && <div className="toast" role="status">{toast}</div>}

@@ -1,6 +1,6 @@
 import { fmt, fmtDate } from '../utils/format'
 
-export default function TransactionList({ transactions, onEdit, onDelete, hasFilters, onCreateClick }) {
+export default function TransactionList({ transactions, onEdit, onDelete, onViewAnexo, hasFilters, onCreateClick }) {
   if (transactions.length === 0) {
     if (hasFilters) {
       return (
@@ -31,9 +31,21 @@ export default function TransactionList({ transactions, onEdit, onDelete, hasFil
         <li key={t.id} className={`transaction-item ${t.tipo}`}>
           <div className="tx-icon">{t.tipo === 'receita' ? '↑' : '↓'}</div>
           <div className="tx-info">
-            <span className="tx-desc">
-              {t.recorrenciaId && <span title="Gerada automaticamente por uma recorrência">🔁 </span>}
-              {t.descricao || t.categoria}
+            <span className="tx-desc-row">
+              <span className="tx-desc">
+                {t.recorrenciaId && <span title="Gerada automaticamente por uma recorrência">🔁 </span>}
+                {t.descricao || t.categoria}
+              </span>
+              {t.anexoNome && (
+                <button
+                  type="button"
+                  className="tx-anexo-btn"
+                  onClick={() => onViewAnexo(t)}
+                  title={`Ver comprovante: ${t.anexoNome}`}
+                >
+                  📎
+                </button>
+              )}
             </span>
             <span className="tx-meta">{t.categoria} · {fmtDate(t.data)}</span>
           </div>

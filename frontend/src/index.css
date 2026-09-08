@@ -566,7 +566,10 @@ input[type="month"]::-webkit-calendar-picker-indicator { filter: var(--picker-in
 .transaction-item.receita .tx-icon { background: rgba(34,197,94,0.15); color: var(--green); }
 .transaction-item.despesa .tx-icon { background: rgba(239,68,68,0.15); color: var(--red); }
 .tx-info { flex: 1; min-width: 0; }
-.tx-desc { display: block; font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tx-desc-row { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.tx-desc { display: block; min-width: 0; font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tx-anexo-btn { flex-shrink: 0; background: none; border: none; cursor: pointer; padding: 0; font-size: 13px; line-height: 1; opacity: 0.75; transition: opacity 0.2s; }
+.tx-anexo-btn:hover { opacity: 1; }
 .tx-meta { font-size: 12px; color: var(--text-muted); }
 .tx-amount { font-size: 15px; font-weight: 700; white-space: nowrap; }
 .transaction-item.receita .tx-amount { color: var(--green); }
@@ -663,6 +666,23 @@ input[type="month"]::-webkit-calendar-picker-indicator { filter: var(--picker-in
 .categoria-chip-nome { flex: 1; font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .categoria-chip-actions { display: flex; gap: 2px; }
 .color-input { width: 44px; height: 36px; padding: 2px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg2); cursor: pointer; }
+
+/* ── ANEXO DE COMPROVANTE ── */
+.anexo-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.anexo-field-nome { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.anexo-field-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.anexo-preview { display: flex; justify-content: center; align-items: center; max-height: 65vh; overflow: auto; background: var(--bg3); border-radius: 8px; padding: 12px; }
+.anexo-preview-img { max-width: 100%; max-height: 60vh; border-radius: 6px; }
+.anexo-preview-pdf { width: 100%; height: 60vh; border: none; border-radius: 6px; }
 
 /* ── CONTAS ── */
 .conta-card {
