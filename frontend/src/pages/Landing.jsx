@@ -64,7 +64,7 @@ export default function Landing() {
 
       <section className="hero">
         <h1>Controle suas finanças<br /><span className="gradient-text">com inteligência</span></h1>
-        <p>Registre receitas e despesas, importe extratos bancários e acompanhe relatórios com gráficos para tomar decisões financeiras mais conscientes — na web ou no desktop.</p>
+        <p>Registre receitas e despesas, sincronize com seu banco, acompanhe insights automáticos e compartilhe a carteira com sua família — na web, no desktop ou instalado no celular.</p>
         <div className="hero-actions">
           <Link to="/cadastro" className="btn btn-primary btn-lg">Usar a versão web</Link>
           {!isDesktopApp && <a href="#desktop" className="btn btn-outline btn-lg">⬇ Baixar para desktop</a>}
@@ -74,8 +74,8 @@ export default function Landing() {
       <section id="sobre" className="about">
         <div className="about-text">
           <h2>O que é o MoneyTrack?</h2>
-          <p>O MoneyTrack é uma aplicação de gestão financeira pessoal criada para ajudar você a entender para onde vai o seu dinheiro. Cadastre receitas e despesas, importe extratos bancários em formato OFX e acompanhe o saldo atualizado automaticamente, com gráficos que mostram a evolução dos seus gastos mês a mês.</p>
-          <p>Disponível como aplicação web, acessível de qualquer navegador, ou como app desktop instalável — sem precisar manter abas abertas no navegador.</p>
+          <p>O MoneyTrack é uma aplicação de gestão financeira pessoal criada para ajudar você a entender para onde vai o seu dinheiro. Cadastre receitas e despesas, importe extratos bancários ou sincronize direto com seu banco via Open Finance, e acompanhe o saldo atualizado automaticamente — com insights automáticos, projeção de saldo e gráficos que mostram a evolução dos seus gastos mês a mês.</p>
+          <p>Disponível como aplicação web, acessível de qualquer navegador, como app desktop instalável ou direto no celular via PWA — e pode ser compartilhado com sua família, todo mundo vendo e lançando na mesma carteira.</p>
         </div>
         <div className="browser-frame">
           <div className="browser-frame-bar">
@@ -153,6 +153,56 @@ export default function Landing() {
             <div className="feature-icon">👤</div>
             <h3>Perfil personalizável</h3>
             <p>Edite nome, e-mail e senha a qualquer momento nas configurações da sua conta.</p>
+          </div>
+          <div className="feature-card">
+            <div className="feature-icon">💡</div>
+            <h3>Insights automáticos</h3>
+            <p>O dashboard aponta sozinho quando um orçamento estoura, um gasto sobe muito ou uma meta está quase batendo.</p>
+          </div>
+          <div className="feature-card">
+            <div className="feature-icon">🏦</div>
+            <h3>Sincronização bancária (Open Finance)</h3>
+            <p>Conecte sua conta no banco via Open Finance e importe contas e transações automaticamente, com saldo sempre atualizado.</p>
+          </div>
+          <div className="feature-card">
+            <div className="feature-icon">🔮</div>
+            <h3>Projeção de saldo</h3>
+            <p>Veja uma estimativa de como o saldo deve fechar o mês, combinando recorrências futuras com o ritmo atual de gastos.</p>
+          </div>
+          <div className="feature-card">
+            <div className="feature-icon">🧾</div>
+            <h3>Relatório em PDF</h3>
+            <p>Baixe um PDF do fechamento mensal com resumo, gráficos e a lista de transações, pronto pra guardar ou compartilhar.</p>
+          </div>
+          <div className="feature-card">
+            <div className="feature-icon">🎨</div>
+            <h3>Categorias personalizadas</h3>
+            <p>Crie, renomeie e escolha ícone e cor pras suas categorias — do jeito que fizer mais sentido pra você.</p>
+          </div>
+          <div className="feature-card">
+            <div className="feature-icon">📎</div>
+            <h3>Anexo de comprovante</h3>
+            <p>Anexe uma foto ou PDF do comprovante em qualquer transação, direto pelo celular ou computador.</p>
+          </div>
+          <div className="feature-card">
+            <div className="feature-icon">🕓</div>
+            <h3>Histórico de edição</h3>
+            <p>Toda edição em uma transação fica registrada — o que mudou, quando e pra qual valor.</p>
+          </div>
+          <div className="feature-card">
+            <div className="feature-icon">✉️</div>
+            <h3>Aviso de orçamento por e-mail</h3>
+            <p>Receba um e-mail automático quando o gasto de uma categoria ultrapassar o orçamento definido.</p>
+          </div>
+          <div className="feature-card">
+            <div className="feature-icon">👨‍👩‍👧</div>
+            <h3>Contas compartilhadas</h3>
+            <p>Compartilhe a mesma carteira com sua família usando um código — todo mundo vê e lança na mesma conta.</p>
+          </div>
+          <div className="feature-card">
+            <div className="feature-icon">📲</div>
+            <h3>Instalável no celular</h3>
+            <p>Instale o MoneyTrack direto do navegador do celular, como um app — sem precisar de loja de aplicativos.</p>
           </div>
         </div>
       </section>
