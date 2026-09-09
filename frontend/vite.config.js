@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { VitePWA } from 'vite-plugin-pwa'
 
 // O Electron carrega o build via file://, que exige caminhos relativos ("./").
 // Já o deploy web usa roteamento client-side (BrowserRouter), que exige caminhos
@@ -8,7 +9,31 @@ import react from '@vitejs/plugin-react'
 const isElectronBuild = process.env.ELECTRON_BUILD === 'true'
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    // PWA só do "app shell" (JS/CSS/HTML/fontes) — nenhuma chamada /api é cacheada,
+    // então o app continua exigindo rede pra qualquer dado real. O registro do
+    // service worker é manual (ver src/main.jsx), pra pular sozinho dentro do
+    // Electron (que carrega via file://, onde service workers não registram).
+    VitePWA({
+      registerType: 'autoUpdate',
+      injectRegister: false,
+      manifest: {
+        name: 'MoneyTrack',
+        short_name: 'MoneyTrack',
+        description: 'Controle financeiro pessoal — transações, orçamentos, metas e mais.',
+        lang: 'pt-BR',
+        theme_color: '#0f1117',
+        background_color: '#0f1117',
+        display: 'standalone',
+        start_url: '/',
+        icons: [
+          { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+        ],
+      },
+    }),
+  ],
   base: isElectronBuild ? './' : '/',
   server: {
     port: 5173,

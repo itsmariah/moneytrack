@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useInstallPrompt } from '../hooks/useInstallPrompt'
 import ThemeToggle from '../components/ThemeToggle'
 import screenshotDashboard from '../../assets/imagens/moneytrack_dashboard.png'
 import screenshotRelatorio from '../../assets/imagens/moneytrack_relatorio.png'
@@ -10,6 +11,7 @@ const isDesktopApp = window.location.protocol === 'file:'
 
 export default function Landing() {
   const { user } = useAuth()
+  const { canInstall, promptInstall } = useInstallPrompt()
   const navigate = useNavigate()
   const location = useLocation()
   const [showBackToTop, setShowBackToTop] = useState(false)
@@ -177,14 +179,21 @@ export default function Landing() {
               <span className="platform-badge">🍎 macOS</span>
               <span className="platform-badge">🐧 Linux</span>
             </div>
-            <a
-              href={RELEASES_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-primary btn-lg"
-            >
-              ⬇ Baixar instalador
-            </a>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <a
+                href={RELEASES_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-primary btn-lg"
+              >
+                ⬇ Baixar instalador
+              </a>
+              {canInstall && (
+                <button type="button" className="btn btn-outline btn-lg" onClick={promptInstall}>
+                  📱 Instalar no celular
+                </button>
+              )}
+            </div>
           </div>
         </section>
       )}
