@@ -488,6 +488,13 @@ input[type="month"]::-webkit-calendar-picker-indicator { filter: var(--picker-in
 .positive { color: var(--green); }
 .negative { color: var(--red); }
 
+/* Card extra que só aparece quando a família tem contas em mais de uma moeda —
+   ocupa a largura toda em vez de disputar espaço com os 3 cards de sempre. */
+.card-por-moeda { grid-column: 1 / -1; }
+.por-moeda-linha { display: flex; align-items: center; gap: 16px; padding: 6px 0; }
+.por-moeda-linha strong { width: 48px; flex-shrink: 0; }
+.por-moeda-linha span { min-width: 110px; }
+
 /* ── PROJEÇÃO DE SALDO ── */
 .projection-card {
   background: var(--bg2);

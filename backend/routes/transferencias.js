@@ -18,7 +18,7 @@ const dataLimiter = rateLimit({
 });
 router.use(dataLimiter);
 
-const transferenciaInclude = { contaOrigem: { select: { nome: true } }, contaDestino: { select: { nome: true } } };
+const transferenciaInclude = { contaOrigem: { select: { nome: true, moeda: true } }, contaDestino: { select: { nome: true, moeda: true } } };
 
 // Listar transferências da família
 router.get('/', async (req, res) => {
@@ -46,6 +46,13 @@ router.post('/', async (req, res) => {
       where: { familiaId: req.familiaId, id: { in: [Number(contaOrigemId), Number(contaDestinoId)] } },
     });
     if (contas.length !== 2) return res.status(400).json({ error: 'Conta de origem ou destino inválida' });
+
+    // Câmbio entre moedas é uma operação de mercado, não uma transferência interna —
+    // quem quiser mover dinheiro entre uma conta em BRL e uma em USD faz isso fora do
+    // app, evitando ter que inventar uma taxa própria pra essa movimentação.
+    if (contas[0].moeda !== contas[1].moeda) {
+      return res.status(400).json({ error: 'Não é possível transferir entre contas de moedas diferentes' });
+    }
 
     const created = await prisma.transferencia.create({
       data: {

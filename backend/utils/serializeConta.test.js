@@ -4,8 +4,8 @@ import { serializeConta, serializeContas, withSaldo } from './serializeConta.js'
 
 describe('serializeConta', () => {
   it('converte saldoInicial (Decimal) para number, preservando os demais campos', () => {
-    const c = { id: 1, nome: 'Nubank', tipo: 'corrente', saldoInicial: new Prisma.Decimal('500.00'), createdAt: '2026-01-01' };
-    expect(serializeConta(c)).toEqual({ id: 1, nome: 'Nubank', tipo: 'corrente', saldoInicial: 500, createdAt: '2026-01-01' });
+    const c = { id: 1, nome: 'Nubank', tipo: 'corrente', moeda: 'BRL', saldoInicial: new Prisma.Decimal('500.00'), createdAt: '2026-01-01' };
+    expect(serializeConta(c)).toEqual({ id: 1, nome: 'Nubank', tipo: 'corrente', moeda: 'BRL', saldoInicial: 500, createdAt: '2026-01-01' });
   });
 });
 

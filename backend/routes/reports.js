@@ -15,6 +15,7 @@ const { generateInsights } = require('../utils/generateInsights');
 const { futureOccurrenceThisMonth, projectBalance } = require('../utils/projectBalance');
 const { ensureOccurrences } = require('../utils/materializeRecorrencias');
 const { TRANSACAO_SELECT_SEM_ANEXO } = require('../utils/transactionSelect');
+const { buscarTaxas, converterParaBRL, agruparPorCategoriaTipo } = require('../utils/currency');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -41,15 +42,38 @@ router.get('/balance', async (req, res) => {
       if (end) where.data.lte = end;
     }
 
-    const [rows, contas] = await Promise.all([
-      prisma.transacao.groupBy({ by: ['tipo'], where, _sum: { valor: true } }),
-      prisma.conta.findMany({ where: { familiaId: req.familiaId }, select: { saldoInicial: true } }),
+    const [rows, contas, taxas] = await Promise.all([
+      prisma.transacao.groupBy({ by: ['contaId', 'tipo'], where, _sum: { valor: true } }),
+      prisma.conta.findMany({ where: { familiaId: req.familiaId }, select: { id: true, moeda: true, saldoInicial: true } }),
+      buscarTaxas(),
     ]);
 
-    // _sum.valor vem como Prisma.Decimal — convertemos para number antes de somar/subtrair.
-    const normalized = rows.map(r => ({ tipo: r.tipo, _sum: { valor: Number(r._sum.valor) } }));
-    const saldoInicialTotal = contas.reduce((soma, c) => soma + Number(c.saldoInicial), 0);
-    res.json(calculateBalance(normalized, saldoInicialTotal));
+    const moedaPorConta = new Map(contas.map(c => [c.id, c.moeda]));
+
+    // saldoInicial de cada conta é convertido pra BRL antes de somar — contas em moedas
+    // diferentes não podem ser somadas direto.
+    const saldoInicialTotal = contas.reduce(
+      (soma, c) => soma + converterParaBRL(c.saldoInicial, c.moeda, taxas), 0
+    );
+
+    // Total geral convertido (por tipo) + detalhamento por moeda com o valor original,
+    // sem conversão — o front mostra os dois, nunca só o número blended escondendo a conta.
+    const porTipoConvertido = { receita: 0, despesa: 0 };
+    const porMoedaMap = new Map();
+    for (const r of rows) {
+      const moeda = moedaPorConta.get(r.contaId) || 'BRL';
+      const valorOriginal = Number(r._sum.valor);
+      porTipoConvertido[r.tipo] += converterParaBRL(valorOriginal, moeda, taxas);
+
+      if (!porMoedaMap.has(moeda)) porMoedaMap.set(moeda, { moeda, receitas: 0, despesas: 0 });
+      porMoedaMap.get(moeda)[r.tipo === 'receita' ? 'receitas' : 'despesas'] += valorOriginal;
+    }
+
+    const normalized = [
+      { tipo: 'receita', _sum: { valor: porTipoConvertido.receita } },
+      { tipo: 'despesa', _sum: { valor: porTipoConvertido.despesa } },
+    ];
+    res.json({ ...calculateBalance(normalized, saldoInicialTotal), porMoeda: [...porMoedaMap.values()] });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao calcular saldo' });
   }
@@ -65,17 +89,25 @@ router.get('/monthly', async (req, res) => {
 
     const { start, end } = getMonthDateRange(month);
 
-    const rawTransactions = await prisma.transacao.findMany({
-      where: {
-        familiaId: req.familiaId,
-        data: { gte: start, lte: end },
-      },
-      select: TRANSACAO_SELECT_SEM_ANEXO,
-      orderBy: { data: 'asc' },
-    });
+    const [rawTransactions, taxas] = await Promise.all([
+      prisma.transacao.findMany({
+        where: {
+          familiaId: req.familiaId,
+          data: { gte: start, lte: end },
+        },
+        select: TRANSACAO_SELECT_SEM_ANEXO,
+        orderBy: { data: 'asc' },
+      }),
+      buscarTaxas(),
+    ]);
 
+    // A lista mostra cada transação na moeda da própria conta (nunca convertida linha a
+    // linha); só o resumo agregado precisa de tudo na mesma moeda pra poder somar.
     const transactions = serializeTransactions(rawTransactions);
-    res.json({ month, transactions, resumo: summarizeTransactions(transactions) });
+    const transactionsConvertidas = transactions.map(t => ({
+      ...t, valor: converterParaBRL(t.valor, t.conta?.moeda || 'BRL', taxas),
+    }));
+    res.json({ month, transactions, resumo: summarizeTransactions(transactionsConvertidas) });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao gerar relatório' });
   }
@@ -92,14 +124,18 @@ router.get('/categories', async (req, res) => {
       if (end) where.data.lte = end;
     }
 
-    const rows = await prisma.transacao.groupBy({
-      by: ['categoria', 'tipo'],
-      where,
-      _sum: { valor: true },
-      orderBy: { _sum: { valor: 'desc' } },
-    });
+    const [rows, contas, taxas] = await Promise.all([
+      prisma.transacao.groupBy({ by: ['contaId', 'categoria', 'tipo'], where, _sum: { valor: true } }),
+      prisma.conta.findMany({ where: { familiaId: req.familiaId }, select: { id: true, moeda: true } }),
+      buscarTaxas(),
+    ]);
 
-    res.json(rows.map(r => ({ categoria: r.categoria, tipo: r.tipo, total: Number(r._sum.valor) })));
+    const moedaPorConta = new Map(contas.map(c => [c.id, c.moeda]));
+    // A ordenação por total passa a ser em JS (não mais via orderBy do Prisma), já que o
+    // total só existe depois de converter e reagregar por categoria+tipo.
+    const resultado = agruparPorCategoriaTipo(rows, moedaPorConta, taxas).sort((a, b) => b.total - a.total);
+
+    res.json(resultado);
   } catch (err) {
     res.status(500).json({ error: 'Erro ao buscar categorias' });
   }
@@ -113,12 +149,18 @@ router.get('/evolution', async (req, res) => {
     sixMonthsAgo.setDate(1);
     const startDate = sixMonthsAgo.toISOString().slice(0, 10);
 
-    const rawTransactions = await prisma.transacao.findMany({
-      where: { familiaId: req.familiaId, data: { gte: startDate } },
-      select: { tipo: true, valor: true, data: true },
-    });
+    const [rawTransactions, taxas] = await Promise.all([
+      prisma.transacao.findMany({
+        where: { familiaId: req.familiaId, data: { gte: startDate } },
+        select: { tipo: true, valor: true, data: true, conta: { select: { moeda: true } } },
+      }),
+      buscarTaxas(),
+    ]);
 
-    res.json(buildMonthlyEvolution(serializeTransactions(rawTransactions)));
+    const transactions = serializeTransactions(rawTransactions).map(t => ({
+      ...t, valor: converterParaBRL(t.valor, t.conta?.moeda || 'BRL', taxas),
+    }));
+    res.json(buildMonthlyEvolution(transactions));
   } catch (err) {
     res.status(500).json({ error: 'Erro ao buscar evolução' });
   }
@@ -133,23 +175,28 @@ router.get('/insights', async (req, res) => {
     const { start: startAtual, end: endAtual } = getMonthDateRange(mesAtual);
     const { start: startAnterior, end: endAnterior } = getMonthDateRange(mesAnterior);
 
-    const [rowsAtual, rowsAnterior, orcamentos, metas] = await Promise.all([
+    const [rowsAtual, rowsAnterior, orcamentos, metas, contas, taxas] = await Promise.all([
       prisma.transacao.groupBy({
-        by: ['categoria', 'tipo'],
+        by: ['contaId', 'categoria', 'tipo'],
         where: { familiaId: req.familiaId, data: { gte: startAtual, lte: endAtual } },
         _sum: { valor: true },
       }),
       prisma.transacao.groupBy({
-        by: ['categoria', 'tipo'],
+        by: ['contaId', 'categoria', 'tipo'],
         where: { familiaId: req.familiaId, data: { gte: startAnterior, lte: endAnterior } },
         _sum: { valor: true },
       }),
       prisma.orcamento.findMany({ where: { familiaId: req.familiaId } }),
       prisma.meta.findMany({ where: { familiaId: req.familiaId }, include: { aportes: true } }),
+      prisma.conta.findMany({ where: { familiaId: req.familiaId }, select: { id: true, moeda: true } }),
+      buscarTaxas(),
     ]);
 
-    const categoriasMesAtual = rowsAtual.map(r => ({ categoria: r.categoria, tipo: r.tipo, total: Number(r._sum.valor) }));
-    const categoriasMesAnterior = rowsAnterior.map(r => ({ categoria: r.categoria, tipo: r.tipo, total: Number(r._sum.valor) }));
+    const moedaPorConta = new Map(contas.map(c => [c.id, c.moeda]));
+    // Orçamentos e metas continuam sempre em R$ (não têm conta associada) — só as
+    // categorias vindas de transações precisam de conversão antes de comparar com eles.
+    const categoriasMesAtual = agruparPorCategoriaTipo(rowsAtual, moedaPorConta, taxas);
+    const categoriasMesAnterior = agruparPorCategoriaTipo(rowsAnterior, moedaPorConta, taxas);
 
     const orcamentosComGasto = orcamentos.map(o => ({
       categoria: o.categoria,
@@ -192,22 +239,40 @@ router.get('/projecao', async (req, res) => {
     const { start, end } = getMonthDateRange(mesStr);
     const totalDiasNoMes = Number(end.slice(-2));
 
-    const [balanceRows, contas, despesasNaoRecAgg, recorrencias] = await Promise.all([
-      prisma.transacao.groupBy({ by: ['tipo'], where: { familiaId: req.familiaId }, _sum: { valor: true } }),
-      prisma.conta.findMany({ where: { familiaId: req.familiaId }, select: { saldoInicial: true } }),
-      prisma.transacao.aggregate({
+    const [balanceRows, contas, despesasNaoRecRows, recorrencias, taxas] = await Promise.all([
+      prisma.transacao.groupBy({ by: ['contaId', 'tipo'], where: { familiaId: req.familiaId }, _sum: { valor: true } }),
+      prisma.conta.findMany({ where: { familiaId: req.familiaId }, select: { id: true, moeda: true, saldoInicial: true } }),
+      prisma.transacao.groupBy({
+        by: ['contaId'],
         where: { familiaId: req.familiaId, tipo: 'despesa', recorrenciaId: null, data: { gte: start, lte: hojeStr } },
         _sum: { valor: true },
       }),
       prisma.recorrencia.findMany({ where: { familiaId: req.familiaId, ativa: true } }),
+      buscarTaxas(),
     ]);
 
-    const normalized = balanceRows.map(r => ({ tipo: r.tipo, _sum: { valor: Number(r._sum.valor) } }));
-    const saldoInicialTotal = contas.reduce((soma, c) => soma + Number(c.saldoInicial), 0);
+    const moedaPorConta = new Map(contas.map(c => [c.id, c.moeda]));
+
+    const porTipoConvertido = { receita: 0, despesa: 0 };
+    for (const r of balanceRows) {
+      porTipoConvertido[r.tipo] += converterParaBRL(r._sum.valor, moedaPorConta.get(r.contaId) || 'BRL', taxas);
+    }
+    const normalized = [
+      { tipo: 'receita', _sum: { valor: porTipoConvertido.receita } },
+      { tipo: 'despesa', _sum: { valor: porTipoConvertido.despesa } },
+    ];
+    const saldoInicialTotal = contas.reduce(
+      (soma, c) => soma + converterParaBRL(c.saldoInicial, c.moeda, taxas), 0
+    );
     const { saldo: saldoAtual } = calculateBalance(normalized, saldoInicialTotal);
 
-    const despesasNaoRecorrentesAteHoje = Number(despesasNaoRecAgg._sum.valor || 0);
+    const despesasNaoRecorrentesAteHoje = despesasNaoRecRows.reduce(
+      (soma, r) => soma + converterParaBRL(r._sum.valor || 0, moedaPorConta.get(r.contaId) || 'BRL', taxas), 0
+    );
+    // futureOccurrenceThisMonth não sabe nada de moeda — convertemos o valor da
+    // recorrência (na moeda da conta dela) antes de passar pra função.
     const recorrenciasFuturas = recorrencias
+      .map(r => ({ ...r, valor: converterParaBRL(r.valor, moedaPorConta.get(r.contaId) || 'BRL', taxas) }))
       .map(r => futureOccurrenceThisMonth(r, { ano, mes, hojeStr }))
       .filter(Boolean);
 

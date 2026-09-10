@@ -69,11 +69,12 @@ export default function TransactionList({ transactions, onEdit, onDelete, onView
             </span>
             <span className="tx-meta">
               {t.categoria} · {fmtDate(t.data)}
+              {t.conta?.moeda && t.conta.moeda !== 'BRL' && ` · ${t.conta.nome}`}
               {t.usuario?.nome && t.usuario.nome !== user?.nome && ` · por ${t.usuario.nome}`}
             </span>
           </div>
           <div className="tx-amount">
-            {t.tipo === 'receita' ? '+' : '-'}{fmt(t.valor)}
+            {t.tipo === 'receita' ? '+' : '-'}{fmt(t.valor, t.conta?.moeda)}
           </div>
           <div className="tx-actions">
             <button className="btn-icon" onClick={() => onEdit(t)} title="Editar">✏️</button>

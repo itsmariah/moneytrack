@@ -7,6 +7,7 @@ import TransferModal from '../components/TransferModal'
 import ConectarBancoModal from '../components/ConectarBancoModal'
 import ConexaoBancariaCard from '../components/ConexaoBancariaCard'
 import ConfirmDialog from '../components/ConfirmDialog'
+import CotacoesPanel from '../components/CotacoesPanel'
 import Alert from '../components/Alert'
 import { SkeletonList } from '../components/Skeleton'
 import { fmt, fmtDate } from '../utils/format'
@@ -187,6 +188,8 @@ export default function Contas() {
               ))}
             </div>
 
+            <CotacoesPanel contas={contas} />
+
             {conexoes.length > 0 && (
               <div style={{ marginTop: 24 }}>
                 <h3 style={{ marginBottom: 12 }}>Conexões bancárias</h3>
@@ -217,7 +220,7 @@ export default function Contas() {
                         <span className="tx-desc">{t.contaOrigemNome} → {t.contaDestinoNome}{t.descricao ? ` · ${t.descricao}` : ''}</span>
                         <span className="tx-meta">{fmtDate(t.data)}</span>
                       </div>
-                      <div className="tx-amount">{fmt(t.valor)}</div>
+                      <div className="tx-amount">{fmt(t.valor, t.moeda)}</div>
                       <div className="tx-actions">
                         <button className="btn-icon btn-danger" onClick={() => setDeleteTransferId(t.id)} title="Desfazer">🗑️</button>
                       </div>

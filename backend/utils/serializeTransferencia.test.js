@@ -7,9 +7,9 @@ describe('serializeTransferencia', () => {
     const t = {
       id: 1,
       contaOrigemId: 1,
-      contaOrigem: { nome: 'Nubank' },
+      contaOrigem: { nome: 'Nubank', moeda: 'USD' },
       contaDestinoId: 2,
-      contaDestino: { nome: 'Cartão' },
+      contaDestino: { nome: 'Cartão', moeda: 'USD' },
       valor: new Prisma.Decimal('300.00'),
       data: '2026-08-10',
       descricao: '',
@@ -21,6 +21,7 @@ describe('serializeTransferencia', () => {
       contaOrigemNome: 'Nubank',
       contaDestinoId: 2,
       contaDestinoNome: 'Cartão',
+      moeda: 'USD',
       valor: 300,
       data: '2026-08-10',
       descricao: '',
@@ -33,6 +34,7 @@ describe('serializeTransferencia', () => {
     const result = serializeTransferencia(t);
     expect(result.contaOrigemNome).toBeUndefined();
     expect(result.valor).toBe(50);
+    expect(result.moeda).toBe('BRL');
   });
 });
 

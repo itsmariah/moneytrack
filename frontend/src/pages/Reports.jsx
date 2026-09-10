@@ -33,14 +33,20 @@ export default function Reports() {
   const [tipoFilter, setTipoFilter] = useState('todos')
   const [categoriaFilter, setCategoriaFilter] = useState('todas')
   const [generatingPdf, setGeneratingPdf] = useState(false)
+  const [taxas, setTaxas] = useState({ BRL: 1 })
   const evolutionRef = useRef(null)
   const despesasChartRef = useRef(null)
   const receitasChartRef = useRef(null)
+
+  // Transações da lista ficam na moeda original da conta; os cards/gráficos somam tudo
+  // em BRL, então precisam converter primeiro — daí buscar as taxas aqui também.
+  const converterParaBRL = (valor, moeda) => valor * (taxas[moeda || 'BRL'] ?? 1)
 
   useEffect(() => { fetchReport() }, [month])
 
   useEffect(() => {
     api.get('/reports/evolution').then(r => setEvolution(r.data)).catch(() => {})
+    api.get('/cambio').then(r => setTaxas(r.data.taxas)).catch(() => {})
   }, [])
 
   // Reset category when month or tipo changes
@@ -84,29 +90,38 @@ export default function Reports() {
     })
   }, [report, tipoFilter, categoriaFilter])
 
-  // Summary cards recomputed from filtered set
+  // Summary cards recomputed from filtered set — convertido pra BRL, mais o
+  // detalhamento por moeda (mesmo padrão do /reports/balance).
   const summary = useMemo(() => {
-    const receitas = filtered.filter(t => t.tipo === 'receita').reduce((s, t) => s + t.valor, 0)
-    const despesas = filtered.filter(t => t.tipo === 'despesa').reduce((s, t) => s + t.valor, 0)
-    return { receitas, despesas, saldo: receitas - despesas }
-  }, [filtered])
+    let receitas = 0, despesas = 0
+    const porMoedaMap = new Map()
+    for (const t of filtered) {
+      const moeda = t.conta?.moeda || 'BRL'
+      const convertido = converterParaBRL(t.valor, moeda)
+      if (t.tipo === 'receita') receitas += convertido; else despesas += convertido
+      if (!porMoedaMap.has(moeda)) porMoedaMap.set(moeda, { moeda, receitas: 0, despesas: 0 })
+      porMoedaMap.get(moeda)[t.tipo === 'receita' ? 'receitas' : 'despesas'] += t.valor
+    }
+    return { receitas, despesas, saldo: receitas - despesas, porMoeda: [...porMoedaMap.values()] }
+  }, [filtered, taxas])
 
-  // Pie charts computed from filtered set
+  // Pie charts computed from filtered set (convertido pra BRL pra poder comparar categorias
+  // de contas em moedas diferentes na mesma fatia)
   const pieDataDespesas = useMemo(() => {
     const catMap = {}
     for (const t of filtered.filter(tx => tx.tipo === 'despesa')) {
-      catMap[t.categoria] = (catMap[t.categoria] || 0) + t.valor
+      catMap[t.categoria] = (catMap[t.categoria] || 0) + converterParaBRL(t.valor, t.conta?.moeda)
     }
     return Object.entries(catMap).map(([name, value]) => ({ name, value }))
-  }, [filtered])
+  }, [filtered, taxas])
 
   const pieDataReceitas = useMemo(() => {
     const catMap = {}
     for (const t of filtered.filter(tx => tx.tipo === 'receita')) {
-      catMap[t.categoria] = (catMap[t.categoria] || 0) + t.valor
+      catMap[t.categoria] = (catMap[t.categoria] || 0) + converterParaBRL(t.valor, t.conta?.moeda)
     }
     return Object.entries(catMap).map(([name, value]) => ({ name, value }))
-  }, [filtered])
+  }, [filtered, taxas])
 
   const evolutionData = evolution.map(e => ({
     mes: e.mes,
@@ -321,10 +336,13 @@ export default function Reports() {
                           {t.recorrenciaId && <span title="Gerada automaticamente por uma recorrência">🔁 </span>}
                           {t.descricao || t.categoria}
                         </span>
-                        <span className="tx-meta">{t.categoria} · {fmtDate(t.data)}</span>
+                        <span className="tx-meta">
+                          {t.categoria} · {fmtDate(t.data)}
+                          {t.conta?.moeda && t.conta.moeda !== 'BRL' && ` · ${t.conta.nome}`}
+                        </span>
                       </div>
                       <div className="tx-amount">
-                        {t.tipo === 'receita' ? '+' : '-'}{fmt(t.valor)}
+                        {t.tipo === 'receita' ? '+' : '-'}{fmt(t.valor, t.conta?.moeda)}
                       </div>
                     </li>
                   ))}

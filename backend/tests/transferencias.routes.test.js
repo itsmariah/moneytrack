@@ -94,6 +94,33 @@ describe('POST /api/transferencias', () => {
     expect(res.status).toBe(201);
     expect(createSpy.mock.calls[0][0].data.usuarioId).toBe(7);
   });
+
+  it('permite transferência entre contas na mesma moeda', async () => {
+    vi.spyOn(prisma.conta, 'findMany').mockResolvedValue([{ id: 1, moeda: 'USD' }, { id: 2, moeda: 'USD' }]);
+    const createSpy = vi.spyOn(prisma.transferencia, 'create').mockResolvedValue(rawTransferencia());
+
+    const res = await request(app)
+      .post('/api/transferencias')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ contaOrigemId: 1, contaDestinoId: 2, valor: 100, data: '2026-08-10' });
+
+    expect(res.status).toBe(201);
+    expect(createSpy).toHaveBeenCalled();
+  });
+
+  it('rejeita transferência entre contas de moedas diferentes (400)', async () => {
+    vi.spyOn(prisma.conta, 'findMany').mockResolvedValue([{ id: 1, moeda: 'BRL' }, { id: 2, moeda: 'USD' }]);
+    const createSpy = vi.spyOn(prisma.transferencia, 'create');
+
+    const res = await request(app)
+      .post('/api/transferencias')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ contaOrigemId: 1, contaDestinoId: 2, valor: 100, data: '2026-08-10' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/moedas diferentes/);
+    expect(createSpy).not.toHaveBeenCalled();
+  });
 });
 
 describe('DELETE /api/transferencias/:id', () => {

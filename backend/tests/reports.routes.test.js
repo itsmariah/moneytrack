@@ -13,6 +13,10 @@ const token = makeToken(7);
 beforeEach(() => {
   // authMiddleware confere tokenVersion e resolve a família a cada requisição autenticada.
   vi.spyOn(prisma.usuario, 'findUnique').mockResolvedValue({ tokenVersion: 0, familiaId: 1, papelFamilia: 'dono' });
+  // Toda rota de relatório busca a cotação de câmbio antes de agregar — sem nenhuma
+  // linha em TaxaCambio, buscarTaxas() cai no default (BRL: 1), que é o caso comum
+  // nos testes abaixo (a menos que um teste específico configure moedas diferentes).
+  vi.spyOn(prisma.taxaCambio, 'findMany').mockResolvedValue([]);
 });
 
 afterEach(() => {
@@ -35,7 +39,10 @@ describe('GET /api/reports/balance', () => {
     const res = await request(app).get('/api/reports/balance').set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ receitas: 5000, despesas: 3200, saldo: 1800 });
+    expect(res.body).toEqual({
+      receitas: 5000, despesas: 3200, saldo: 1800,
+      porMoeda: [{ moeda: 'BRL', receitas: 5000, despesas: 3200 }],
+    });
   });
 
   it('soma o saldoInicial das contas do usuário ao saldo', async () => {
@@ -50,7 +57,10 @@ describe('GET /api/reports/balance', () => {
     const res = await request(app).get('/api/reports/balance').set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ receitas: 1000, despesas: 0, saldo: 1700 });
+    expect(res.body).toEqual({
+      receitas: 1000, despesas: 0, saldo: 1700,
+      porMoeda: [{ moeda: 'BRL', receitas: 1000, despesas: 0 }],
+    });
   });
 
   it('escopa o groupBy pelo familiaId do token', async () => {
@@ -58,6 +68,45 @@ describe('GET /api/reports/balance', () => {
     vi.spyOn(prisma.conta, 'findMany').mockResolvedValue([]);
     await request(app).get('/api/reports/balance').set('Authorization', `Bearer ${token}`);
     expect(spy.mock.calls[0][0].where.familiaId).toBe(1);
+  });
+
+  it('converte receitas/despesas de uma conta em moeda estrangeira antes de somar ao total', async () => {
+    vi.spyOn(prisma.taxaCambio, 'findMany').mockResolvedValue([
+      { moeda: 'USD', taxaParaBRL: new Prisma.Decimal('5.000000') },
+    ]);
+    vi.spyOn(prisma.transacao, 'groupBy').mockResolvedValue([
+      { contaId: 1, tipo: 'receita', _sum: { valor: new Prisma.Decimal('1000.00') } }, // conta BRL
+      { contaId: 2, tipo: 'despesa', _sum: { valor: new Prisma.Decimal('20.00') } }, // conta USD -> R$100
+    ]);
+    vi.spyOn(prisma.conta, 'findMany').mockResolvedValue([
+      { id: 1, moeda: 'BRL', saldoInicial: new Prisma.Decimal('0.00') },
+      { id: 2, moeda: 'USD', saldoInicial: new Prisma.Decimal('0.00') },
+    ]);
+
+    const res = await request(app).get('/api/reports/balance').set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.receitas).toBe(1000);
+    expect(res.body.despesas).toBe(100); // 20 USD convertido a 5 -> R$100
+    expect(res.body.saldo).toBe(900);
+    expect(res.body.porMoeda).toContainEqual({ moeda: 'BRL', receitas: 1000, despesas: 0 });
+    // valor original (20), não convertido, no detalhamento por moeda
+    expect(res.body.porMoeda).toContainEqual({ moeda: 'USD', receitas: 0, despesas: 20 });
+  });
+
+  it('converte o saldoInicial de contas em moeda estrangeira antes de somar', async () => {
+    vi.spyOn(prisma.taxaCambio, 'findMany').mockResolvedValue([
+      { moeda: 'USD', taxaParaBRL: new Prisma.Decimal('5.000000') },
+    ]);
+    vi.spyOn(prisma.transacao, 'groupBy').mockResolvedValue([]);
+    vi.spyOn(prisma.conta, 'findMany').mockResolvedValue([
+      { id: 1, moeda: 'BRL', saldoInicial: new Prisma.Decimal('100.00') },
+      { id: 2, moeda: 'USD', saldoInicial: new Prisma.Decimal('50.00') }, // -> R$250
+    ]);
+
+    const res = await request(app).get('/api/reports/balance').set('Authorization', `Bearer ${token}`);
+
+    expect(res.body.saldo).toBe(350); // 100 + (50 * 5)
   });
 });
 
@@ -95,13 +144,33 @@ describe('GET /api/reports/monthly', () => {
 describe('GET /api/reports/categories', () => {
   it('converte os totais (Decimal) para number', async () => {
     vi.spyOn(prisma.transacao, 'groupBy').mockResolvedValue([
-      { categoria: 'Lazer', tipo: 'despesa', _sum: { valor: new Prisma.Decimal('120.00') } },
+      { contaId: 1, categoria: 'Lazer', tipo: 'despesa', _sum: { valor: new Prisma.Decimal('120.00') } },
     ]);
+    vi.spyOn(prisma.conta, 'findMany').mockResolvedValue([{ id: 1, moeda: 'BRL' }]);
 
     const res = await request(app).get('/api/reports/categories').set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
     expect(res.body[0].total).toBe(120);
+  });
+
+  it('soma a mesma categoria vinda de contas em moedas diferentes, já convertida', async () => {
+    vi.spyOn(prisma.taxaCambio, 'findMany').mockResolvedValue([
+      { moeda: 'USD', taxaParaBRL: new Prisma.Decimal('5.000000') },
+    ]);
+    vi.spyOn(prisma.transacao, 'groupBy').mockResolvedValue([
+      { contaId: 1, categoria: 'Viagem', tipo: 'despesa', _sum: { valor: new Prisma.Decimal('100.00') } },
+      { contaId: 2, categoria: 'Viagem', tipo: 'despesa', _sum: { valor: new Prisma.Decimal('20.00') } }, // USD -> R$100
+    ]);
+    vi.spyOn(prisma.conta, 'findMany').mockResolvedValue([
+      { id: 1, moeda: 'BRL' },
+      { id: 2, moeda: 'USD' },
+    ]);
+
+    const res = await request(app).get('/api/reports/categories').set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([{ categoria: 'Viagem', tipo: 'despesa', total: 200 }]);
   });
 });
 
@@ -178,15 +247,17 @@ describe('GET /api/reports/projecao', () => {
   });
 
   it('escopa a agregação de gastos não recorrentes por familiaId do token', async () => {
-    vi.spyOn(prisma.transacao, 'groupBy').mockResolvedValue([]);
+    // Primeira chamada de groupBy é o balanceRows (por tipo), a segunda é a de despesas
+    // não recorrentes (por contaId) — confere essa segunda especificamente.
+    const groupBySpy = vi.spyOn(prisma.transacao, 'groupBy').mockResolvedValue([]);
     vi.spyOn(prisma.conta, 'findMany').mockResolvedValue([]);
-    const aggSpy = vi.spyOn(prisma.transacao, 'aggregate').mockResolvedValue({ _sum: { valor: null } });
     vi.spyOn(prisma.recorrencia, 'findMany').mockResolvedValue([]);
 
     await request(app).get('/api/reports/projecao?usuarioId=999').set('Authorization', `Bearer ${token}`);
 
-    expect(aggSpy.mock.calls[0][0].where.familiaId).toBe(1);
-    expect(aggSpy.mock.calls[0][0].where.recorrenciaId).toBeNull();
+    const despesasCall = groupBySpy.mock.calls.find(c => c[0].where.tipo === 'despesa');
+    expect(despesasCall[0].where.familiaId).toBe(1);
+    expect(despesasCall[0].where.recorrenciaId).toBeNull();
   });
 });
 

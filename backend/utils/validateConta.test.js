@@ -29,4 +29,16 @@ describe('validateContaInput', () => {
     expect(validateContaInput({ nome: 'Nubank', tipo: 'corrente' })).toMatch(/número/);
     expect(validateContaInput({ ...base, saldoInicial: 'abc' })).toMatch(/número/);
   });
+
+  it('não exige moeda (campo opcional na validação — o caller resolve o default)', () => {
+    expect(validateContaInput(base)).toBeNull();
+  });
+
+  it('aceita moeda suportada', () => {
+    expect(validateContaInput({ ...base, moeda: 'USD' })).toBeNull();
+  });
+
+  it('rejeita moeda não suportada', () => {
+    expect(validateContaInput({ ...base, moeda: 'JPY' })).toMatch(/Moeda/);
+  });
 });

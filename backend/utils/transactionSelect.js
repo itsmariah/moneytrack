@@ -18,6 +18,9 @@ const TRANSACAO_SELECT_SEM_ANEXO = {
   // Nome de quem lançou — usado no frontend pra mostrar "por Fulano" quando a
   // transação foi criada por outro membro da família, não pelo usuário logado.
   usuario: { select: { nome: true } },
+  // Moeda da conta (a transação sempre herda a moeda da conta, nunca tem a sua
+  // própria) — cada linha é exibida na moeda de origem, nunca convertida individualmente.
+  conta: { select: { nome: true, moeda: true } },
 };
 
 module.exports = { TRANSACAO_SELECT_SEM_ANEXO };

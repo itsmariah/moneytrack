@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import api from '../services/api'
 import { TIPOS_CONTA } from '../utils/contaTipos'
 import Modal from './Modal'
@@ -9,9 +9,18 @@ export default function ContaModal({ conta, onClose, onSaved }) {
     nome: conta?.nome || '',
     tipo: conta?.tipo || TIPOS_CONTA[0].valor,
     saldoInicial: conta?.saldoInicial ?? 0,
+    moeda: conta?.moeda || 'BRL',
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [moedas, setMoedas] = useState([])
+
+  // moeda só pode ser escolhida na criação — depois de existirem transações
+  // atreladas à conta, trocar a moeda invalidaria tudo que já foi lançado.
+  useEffect(() => {
+    if (conta) return
+    api.get('/cambio').then(res => setMoedas(res.data.moedas)).catch(() => {})
+  }, [conta])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -64,8 +73,29 @@ export default function ContaModal({ conta, onClose, onSaved }) {
           </select>
         </div>
 
+        {!conta && moedas.length > 0 && (
+          <div className="form-group">
+            <label htmlFor="conta-moeda">Moeda</label>
+            <select
+              id="conta-moeda"
+              value={form.moeda}
+              onChange={e => setForm({ ...form, moeda: e.target.value })}
+            >
+              {moedas.map(m => <option key={m.codigo} value={m.codigo}>{m.simbolo} {m.nome}</option>)}
+            </select>
+            <span className="form-hint">Não pode ser alterada depois de criar a conta.</span>
+          </div>
+        )}
+
+        {conta && conta.moeda && conta.moeda !== 'BRL' && (
+          <div className="form-group">
+            <label>Moeda</label>
+            <input type="text" value={conta.moeda} disabled />
+          </div>
+        )}
+
         <div className="form-group">
-          <label htmlFor="conta-saldo">Saldo inicial (R$)</label>
+          <label htmlFor="conta-saldo">Saldo inicial ({form.moeda === 'BRL' ? 'R$' : form.moeda})</label>
           <input
             id="conta-saldo"
             type="number"

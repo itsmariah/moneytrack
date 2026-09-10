@@ -129,6 +129,10 @@ model Conta {
   nome                   String
   tipo                   String
   saldoInicial           Decimal         @db.Decimal(12, 2) @default(0)
+  // Fixada na criação, nunca muda depois (mesmo princípio de Recorrencia.dataInicio) —
+  // mudar a moeda de uma conta com transações já lançadas corromperia a leitura do
+  // histórico. Ver utils/moedas.js pra lista de moedas suportadas.
+  moeda                  String          @default("BRL")
   createdAt              DateTime        @default(now())
   usuario                Usuario         @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   familia                Familia         @relation(fields: [familiaId], references: [id], onDelete: Cascade)
@@ -247,4 +251,15 @@ model Orcamento {
   ultimaNotificacaoMes String?
 
   @@unique([familiaId, categoria])
+}
+
+// Cotação de câmbio pra converter contas em moeda estrangeira pro total consolidado em
+// R$ (Dashboard/Relatórios). Global (sem familiaId) — cotação é dado de mercado, não
+// pertence a uma família específica. Atualizada manualmente (botão "Atualizar cotações"
+// em Contas), nunca por cron — ver utils/currency.js e routes/cambio.js.
+model TaxaCambio {
+  id           Int      @id @default(autoincrement())
+  moeda        String   @unique
+  taxaParaBRL  Decimal  @db.Decimal(12, 6)
+  atualizadoEm DateTime @default(now())
 }

@@ -9,6 +9,9 @@ function serializeTransferencia(t) {
     contaOrigemNome: t.contaOrigem?.nome,
     contaDestinoId: t.contaDestinoId,
     contaDestinoNome: t.contaDestino?.nome,
+    // As duas contas de uma transferência sempre têm a mesma moeda (bloqueado na criação),
+    // então a moeda da origem já representa a transferência inteira.
+    moeda: t.contaOrigem?.moeda || 'BRL',
     valor: Number(t.valor),
     data: t.data,
     descricao: t.descricao,

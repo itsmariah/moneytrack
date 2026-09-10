@@ -19,6 +19,10 @@ describe('fmt', () => {
   it('formata valores negativos', () => {
     expect(fmt(-50)).toMatch(/^-R\$\s50,00$/)
   })
+
+  it('formata em outra moeda quando informada', () => {
+    expect(fmt(50, 'USD')).toMatch(/US\$\s?50,00/)
+  })
 })
 
 describe('fmtDate', () => {

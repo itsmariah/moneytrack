@@ -106,6 +106,41 @@ describe('POST /api/contas', () => {
     expect(res.status).toBe(400);
     expect(createSpy).not.toHaveBeenCalled();
   });
+
+  it('usa BRL como moeda padrão quando não informada', async () => {
+    const createSpy = vi.spyOn(prisma.conta, 'create').mockResolvedValue(rawConta());
+
+    await request(app)
+      .post('/api/contas')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ nome: 'Nubank', tipo: 'corrente', saldoInicial: 500 });
+
+    expect(createSpy.mock.calls[0][0].data.moeda).toBe('BRL');
+  });
+
+  it('cria a conta na moeda informada', async () => {
+    const createSpy = vi.spyOn(prisma.conta, 'create').mockResolvedValue(rawConta({ moeda: 'USD' }));
+
+    const res = await request(app)
+      .post('/api/contas')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ nome: 'Conta em dólar', tipo: 'corrente', saldoInicial: 100, moeda: 'USD' });
+
+    expect(res.status).toBe(201);
+    expect(createSpy.mock.calls[0][0].data.moeda).toBe('USD');
+  });
+
+  it('rejeita moeda não suportada (400)', async () => {
+    const createSpy = vi.spyOn(prisma.conta, 'create');
+
+    const res = await request(app)
+      .post('/api/contas')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ nome: 'Conta', tipo: 'corrente', saldoInicial: 100, moeda: 'JPY' });
+
+    expect(res.status).toBe(400);
+    expect(createSpy).not.toHaveBeenCalled();
+  });
 });
 
 describe('PUT /api/contas/:id', () => {
@@ -133,6 +168,18 @@ describe('PUT /api/contas/:id', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.nome).toBe('Nubank PJ');
+  });
+
+  it('nunca inclui moeda no update, mesmo que o body tente mudar', async () => {
+    vi.spyOn(prisma.conta, 'findFirst').mockResolvedValue(rawConta({ moeda: 'BRL' }));
+    const updateSpy = vi.spyOn(prisma.conta, 'update').mockResolvedValue(rawConta());
+
+    await request(app)
+      .put('/api/contas/1')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ nome: 'Nubank', tipo: 'corrente', saldoInicial: 500, moeda: 'USD' });
+
+    expect(updateSpy.mock.calls[0][0].data).not.toHaveProperty('moeda');
   });
 });
 

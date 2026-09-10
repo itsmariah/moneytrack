@@ -41,11 +41,25 @@ describe('escapeCsvField', () => {
 describe('buildTransactionsCsv', () => {
   it('gera cabeçalho e uma linha por transação, delimitadas por ponto e vírgula', () => {
     const csv = buildTransactionsCsv([
-      { data: '2026-08-10', tipo: 'despesa', categoria: 'Alimentação', descricao: 'Mercado', valor: 45.9 },
+      { data: '2026-08-10', tipo: 'despesa', categoria: 'Alimentação', descricao: 'Mercado', valor: 45.9, conta: { moeda: 'BRL' } },
     ]);
     const lines = csv.replace(/^﻿/, '').split('\r\n');
-    expect(lines[0]).toBe('Data;Tipo;Categoria;Descrição;Valor');
-    expect(lines[1]).toBe('2026-08-10;Despesa;Alimentação;Mercado;45,90');
+    expect(lines[0]).toBe('Data;Tipo;Categoria;Descrição;Valor;Moeda');
+    expect(lines[1]).toBe('2026-08-10;Despesa;Alimentação;Mercado;45,90;BRL');
+  });
+
+  it('usa BRL como moeda padrão quando a transação não traz conta.moeda', () => {
+    const csv = buildTransactionsCsv([
+      { data: '2026-08-10', tipo: 'despesa', categoria: 'Alimentação', descricao: 'Mercado', valor: 45.9 },
+    ]);
+    expect(csv).toContain(';45,90;BRL');
+  });
+
+  it('mostra a moeda da conta quando é estrangeira', () => {
+    const csv = buildTransactionsCsv([
+      { data: '2026-08-10', tipo: 'despesa', categoria: 'Viagem', descricao: 'Hotel', valor: 200, conta: { moeda: 'USD' } },
+    ]);
+    expect(csv).toContain(';200,00;USD');
   });
 
   it('capitaliza o tipo (Receita/Despesa) para leitura humana', () => {
@@ -63,7 +77,7 @@ describe('buildTransactionsCsv', () => {
   it('gera só o cabeçalho quando não há transações', () => {
     const csv = buildTransactionsCsv([]);
     const lines = csv.replace(/^﻿/, '').split('\r\n').filter(Boolean);
-    expect(lines).toEqual(['Data;Tipo;Categoria;Descrição;Valor']);
+    expect(lines).toEqual(['Data;Tipo;Categoria;Descrição;Valor;Moeda']);
   });
 
   it('escapa descrição que contém o delimitador', () => {

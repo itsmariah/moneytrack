@@ -51,12 +51,13 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const { nome, tipo, saldoInicial } = req.body;
+    const moeda = req.body.moeda || 'BRL';
 
-    const validationError = validateContaInput(req.body);
+    const validationError = validateContaInput({ ...req.body, moeda });
     if (validationError) return res.status(400).json({ error: validationError });
 
     const created = await prisma.conta.create({
-      data: { usuarioId: req.userId, familiaId: req.familiaId, nome: nome.trim(), tipo, saldoInicial: Number(saldoInicial) },
+      data: { usuarioId: req.userId, familiaId: req.familiaId, nome: nome.trim(), tipo, moeda, saldoInicial: Number(saldoInicial) },
     });
     res.status(201).json(serializeConta(created));
   } catch (err) {
@@ -76,6 +77,8 @@ router.put('/:id', async (req, res) => {
     const validationError = validateContaInput(req.body);
     if (validationError) return res.status(400).json({ error: validationError });
 
+    // moeda nunca entra aqui, mesmo que venha no body — é fixada na criação e não pode
+    // mudar depois (mudar mudaria a interpretação de toda transação já lançada na conta).
     const updated = await prisma.conta.update({
       where: { id },
       data: { nome: nome.trim(), tipo, saldoInicial: Number(saldoInicial) },
