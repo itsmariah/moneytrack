@@ -46,6 +46,9 @@ export default function TransactionList({ transactions, onEdit, onDelete, onView
                 {t.recorrenciaId && <span title="Gerada automaticamente por uma recorrência">🔁 </span>}
                 {t.descricao || t.categoria}
               </span>
+              {t.evento?.nome && (
+                <span className="tx-evento-chip" title={t.evento.nome}>🏷️ {t.evento.nome}</span>
+              )}
               {t.anexoNome && (
                 <button
                   type="button"

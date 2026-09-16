@@ -577,6 +577,7 @@ input[type="month"]::-webkit-calendar-picker-indicator { filter: var(--picker-in
 .tx-desc { display: block; min-width: 0; font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tx-anexo-btn { flex-shrink: 0; background: none; border: none; cursor: pointer; padding: 0; font-size: 13px; line-height: 1; opacity: 0.75; transition: opacity 0.2s; }
 .tx-anexo-btn:hover { opacity: 1; }
+.tx-evento-chip { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; color: var(--primary-light); background: rgba(99,102,241,0.15); padding: 2px 8px; border-radius: 999px; white-space: nowrap; flex-shrink: 0; }
 .tx-meta { font-size: 12px; color: var(--text-muted); }
 .tx-amount { font-size: 15px; font-weight: 700; white-space: nowrap; }
 .transaction-item.receita .tx-amount { color: var(--green); }
@@ -632,6 +633,13 @@ input[type="month"]::-webkit-calendar-picker-indicator { filter: var(--picker-in
 .budget-progress-fill--warn { background: var(--yellow); }
 .budget-progress-fill--over { background: var(--red); }
 .budget-badge--over { color: var(--red); font-weight: 600; }
+
+/* ── EVENTOS ── */
+.evento-card { cursor: pointer; }
+.evento-card--encerrado { opacity: 0.7; }
+.evento-badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px; margin-top: 4px; }
+.evento-badge--ativo { background: rgba(34,197,94,0.15); color: var(--green); }
+.evento-badge--encerrado { background: var(--bg3); color: var(--text-muted); }
 
 /* ── RECORRÊNCIAS ── */
 .form-hint { display: block; font-size: 12px; color: var(--text-muted); margin-top: 6px; }

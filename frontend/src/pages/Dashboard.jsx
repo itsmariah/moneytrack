@@ -25,6 +25,7 @@ export default function Dashboard() {
   const [balance, setBalance] = useState({ receitas: 0, despesas: 0, saldo: 0 })
   const [categoryData, setCategoryData] = useState([])
   const [contas, setContas] = useState([])
+  const [eventos, setEventos] = useState([])
   const [insights, setInsights] = useState([])
   const [projecao, setProjecao] = useState(null)
   const [filters, setFilters] = useState({ tipo: '', categoria: '', conta: '', data_inicio: '', data_fim: '', busca: '' })
@@ -65,13 +66,14 @@ export default function Dashboard() {
     try {
       const params = { ...buildFilterParams(), page, limit: PAGE_SIZE }
 
-      const [txRes, balanceRes, catRes, contasRes, insightsRes, projecaoRes] = await Promise.all([
+      const [txRes, balanceRes, catRes, contasRes, insightsRes, projecaoRes, eventosRes] = await Promise.all([
         api.get('/transactions', { params }),
         api.get('/reports/balance'),
         api.get('/reports/categories'),
         api.get('/contas'),
         api.get('/reports/insights'),
         api.get('/reports/projecao'),
+        api.get('/eventos'),
       ])
 
       setTransactions(txRes.data.transactions)
@@ -85,6 +87,7 @@ export default function Dashboard() {
       setContas(contasRes.data)
       setInsights(insightsRes.data)
       setProjecao(projecaoRes.data)
+      setEventos(eventosRes.data)
     } catch (err) {
       console.error('Erro ao buscar dados:', err)
       setError('Não foi possível carregar seus dados. Verifique sua conexão e tente novamente.')
@@ -324,6 +327,7 @@ export default function Dashboard() {
         <TransactionModal
           transaction={editingTransaction}
           contas={contas}
+          eventos={eventos}
           onClose={handleModalClose}
           onSaved={handleSaved}
         />

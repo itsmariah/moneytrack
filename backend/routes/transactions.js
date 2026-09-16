@@ -36,6 +36,13 @@ async function contaPertenceAFamilia(familiaId, contaId) {
   return Boolean(conta);
 }
 
+// Mesma checagem de IDOR do contaPertenceAFamilia, pro vínculo opcional com Evento.
+async function eventoPertenceAFamilia(familiaId, eventoId) {
+  if (!eventoId) return false;
+  const evento = await prisma.evento.findFirst({ where: { id: Number(eventoId), familiaId } });
+  return Boolean(evento);
+}
+
 // Limite geral para todas as rotas de transação, por usuário autenticado (não por IP)
 const dataLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -60,14 +67,14 @@ const bulkImportLimiter = rateLimit({
 // RF08 - Listar transações (com filtros RF10 e RF11), paginada
 router.get('/', async (req, res) => {
   try {
-    const { tipo, categoria, conta, data_inicio, data_fim, busca, page, limit } = req.query;
+    const { tipo, categoria, conta, evento, data_inicio, data_fim, busca, page, limit } = req.query;
 
     // Materializa aqui (não só na tela de recorrências) porque é a rota que o
     // Dashboard chama sempre que a página abre — garante que ocorrências vencidas
     // apareçam sem o usuário precisar visitar a tela de recorrências primeiro.
     await ensureOccurrences(req.familiaId);
 
-    const where = buildTransactionWhere(req.familiaId, { tipo, categoria, contaId: conta, data_inicio, data_fim, busca });
+    const where = buildTransactionWhere(req.familiaId, { tipo, categoria, contaId: conta, eventoId: evento, data_inicio, data_fim, busca });
     const { page: pageNum, limit: pageSize, skip } = parsePagination(page, limit);
 
     const [rawTransactions, total] = await Promise.all([
@@ -90,8 +97,8 @@ router.get('/', async (req, res) => {
 // Exportação em CSV (respeita os mesmos filtros de tipo/categoria/período/busca da listagem)
 router.get('/export', async (req, res) => {
   try {
-    const { tipo, categoria, conta, data_inicio, data_fim, busca } = req.query;
-    const where = buildTransactionWhere(req.familiaId, { tipo, categoria, contaId: conta, data_inicio, data_fim, busca });
+    const { tipo, categoria, conta, evento, data_inicio, data_fim, busca } = req.query;
+    const where = buildTransactionWhere(req.familiaId, { tipo, categoria, contaId: conta, eventoId: evento, data_inicio, data_fim, busca });
 
     const rawTransactions = await prisma.transacao.findMany({
       where,
@@ -146,12 +153,15 @@ router.post('/bulk', bulkImportLimiter, async (req, res) => {
 // RF04/RF05 - Cadastrar receita ou despesa
 router.post('/', async (req, res) => {
   try {
-    const { tipo, valor, categoria, descricao, data, contaId, anexo, anexoNome } = req.body;
+    const { tipo, valor, categoria, descricao, data, contaId, eventoId, anexo, anexoNome } = req.body;
 
     const validationError = validateTransactionInput(req.body) || validateAnexoInput(req.body);
     if (validationError) return res.status(400).json({ error: validationError });
     if (!(await contaPertenceAFamilia(req.familiaId, contaId))) {
       return res.status(400).json({ error: 'Conta inválida' });
+    }
+    if (eventoId && !(await eventoPertenceAFamilia(req.familiaId, eventoId))) {
+      return res.status(400).json({ error: 'Evento inválido' });
     }
 
     const created = await prisma.transacao.create({
@@ -159,6 +169,7 @@ router.post('/', async (req, res) => {
         usuarioId: req.userId,
         familiaId: req.familiaId,
         contaId: Number(contaId),
+        eventoId: eventoId ? Number(eventoId) : null,
         tipo,
         valor: Number(valor),
         categoria,
@@ -180,7 +191,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const id = Number(req.params.id);
-    const { tipo, valor, categoria, descricao, data, contaId, anexo, anexoNome } = req.body;
+    const { tipo, valor, categoria, descricao, data, contaId, eventoId, anexo, anexoNome } = req.body;
 
     const existing = await prisma.transacao.findFirst({ where: { id, familiaId: req.familiaId } });
     if (!existing) return res.status(404).json({ error: 'Transação não encontrada' });
@@ -191,10 +202,24 @@ router.put('/:id', async (req, res) => {
       return res.status(400).json({ error: 'Conta inválida' });
     }
 
+    // eventoId === undefined -> campo nem foi enviado, mantém o vínculo atual. null/'' ->
+    // desvincula. Só valida a posse quando um id de verdade é enviado.
+    let eventoIdFinal = existing.eventoId;
+    if (eventoId !== undefined) {
+      if (eventoId === null || eventoId === '') {
+        eventoIdFinal = null;
+      } else {
+        if (!(await eventoPertenceAFamilia(req.familiaId, eventoId))) {
+          return res.status(400).json({ error: 'Evento inválido' });
+        }
+        eventoIdFinal = Number(eventoId);
+      }
+    }
+
     // anexo === undefined -> campo nem foi enviado, mantém o anexo existente sem tocar.
     const anexoData = anexo === undefined ? {} : { anexo, anexoNome: anexo ? anexoNome : null };
 
-    const novosValores = { tipo, valor: Number(valor), categoria, descricao: descricao || '', data, contaId: Number(contaId) };
+    const novosValores = { tipo, valor: Number(valor), categoria, descricao: descricao || '', data, contaId: Number(contaId), eventoId: eventoIdFinal };
     const alteracoes = buildTransactionDiff(existing, novosValores);
 
     const [updated] = await prisma.$transaction([

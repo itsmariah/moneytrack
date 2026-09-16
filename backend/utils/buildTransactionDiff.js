@@ -1,6 +1,6 @@
 // Campos financeiros rastreados no histórico de edição — de propósito não inclui anexo/
 // anexoNome, pra não guardar base64 duplicado a cada troca de comprovante.
-const CAMPOS_RASTREADOS = ['tipo', 'valor', 'categoria', 'descricao', 'data', 'contaId'];
+const CAMPOS_RASTREADOS = ['tipo', 'valor', 'categoria', 'descricao', 'data', 'contaId', 'eventoId'];
 
 function normalizar(campo, valor) {
   if (campo === 'valor') return Number(valor);

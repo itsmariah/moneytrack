@@ -11,6 +11,7 @@ const openFinanceRoutes = require('../routes/openFinance');
 const categoriasRoutes = require('../routes/categorias');
 const familiaRoutes = require('../routes/familia');
 const cambioRoutes = require('../routes/cambio');
+const eventosRoutes = require('../routes/eventos');
 
 // Réplica mínima da montagem de rotas do server.js, sem helmet/cors/app.listen —
 // os testes de integração só precisam do roteamento + middlewares de cada router.
@@ -29,6 +30,7 @@ function createTestApp() {
   app.use('/api/categorias', categoriasRoutes);
   app.use('/api/familia', familiaRoutes);
   app.use('/api/cambio', cambioRoutes);
+  app.use('/api/eventos', eventosRoutes);
   return app;
 }
 

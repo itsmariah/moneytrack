@@ -27,6 +27,8 @@ beforeEach(() => {
   // orçamento cadastrado por padrão, ela retorna cedo sem tocar em mais nada (aggregate,
   // e-mail...). Testes específicos abaixo sobrescrevem isso pra exercitar o fluxo completo.
   vi.spyOn(prisma.orcamento, 'findUnique').mockResolvedValue(null);
+  // eventoPertenceAFamilia: por padrão nenhum evento é enviado nos testes que não mencionam.
+  vi.spyOn(prisma.evento, 'findFirst').mockResolvedValue({ id: 1, familiaId: 1 });
 });
 
 // O disparo do aviso de orçamento é fire-and-forget (a rota não espera): dá um respiro
@@ -125,6 +127,46 @@ describe('POST /api/transactions', () => {
     expect(res.status).toBe(201);
     expect(createSpy.mock.calls[0][0].data.anexo).toBe('data:image/png;base64,AAAA');
     expect(createSpy.mock.calls[0][0].data.anexoNome).toBe('nota.png');
+  });
+
+  it('vincula a um evento válido da família', async () => {
+    const createSpy = vi.spyOn(prisma.transacao, 'create').mockResolvedValue({
+      id: 14, usuarioId: 7, tipo: 'despesa', valor: new Prisma.Decimal('50.00'), categoria: 'Lazer', descricao: '', data: '2026-08-10', eventoId: 1,
+    });
+
+    const res = await request(app)
+      .post('/api/transactions')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ tipo: 'despesa', valor: 50, categoria: 'Lazer', data: '2026-08-10', contaId: 1, eventoId: 1 });
+
+    expect(res.status).toBe(201);
+    expect(createSpy.mock.calls[0][0].data.eventoId).toBe(1);
+  });
+
+  it('rejeita quando o evento não pertence à família (400, proteção contra IDOR)', async () => {
+    vi.spyOn(prisma.evento, 'findFirst').mockResolvedValue(null);
+    const createSpy = vi.spyOn(prisma.transacao, 'create');
+
+    const res = await request(app)
+      .post('/api/transactions')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ tipo: 'despesa', valor: 50, categoria: 'Lazer', data: '2026-08-10', contaId: 1, eventoId: 999 });
+
+    expect(res.status).toBe(400);
+    expect(createSpy).not.toHaveBeenCalled();
+  });
+
+  it('cria sem evento quando eventoId não é enviado', async () => {
+    const createSpy = vi.spyOn(prisma.transacao, 'create').mockResolvedValue({
+      id: 15, usuarioId: 7, tipo: 'despesa', valor: new Prisma.Decimal('50.00'), categoria: 'Lazer', descricao: '', data: '2026-08-10',
+    });
+
+    await request(app)
+      .post('/api/transactions')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ tipo: 'despesa', valor: 50, categoria: 'Lazer', data: '2026-08-10', contaId: 1 });
+
+    expect(createSpy.mock.calls[0][0].data.eventoId).toBeNull();
   });
 
   it('rejeita anexo em formato inválido (400)', async () => {
@@ -228,6 +270,63 @@ describe('PUT /api/transactions/:id', () => {
 
     expect(updateSpy.mock.calls[0][0].data.anexo).toBeNull();
     expect(updateSpy.mock.calls[0][0].data.anexoNome).toBeNull();
+  });
+
+  it('não mexe no evento vinculado quando o campo não é enviado', async () => {
+    vi.spyOn(prisma.transacao, 'findFirst').mockResolvedValue({ id: 5, usuarioId: 7, eventoId: 3 });
+    const updateSpy = vi.spyOn(prisma.transacao, 'update').mockResolvedValue({
+      id: 5, usuarioId: 7, tipo: 'receita', valor: new Prisma.Decimal('100.00'), categoria: 'Salário', descricao: '', data: '2026-08-10', eventoId: 3,
+    });
+
+    await request(app)
+      .put('/api/transactions/5')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ tipo: 'receita', valor: 100, categoria: 'Salário', data: '2026-08-10', contaId: 1 });
+
+    expect(updateSpy.mock.calls[0][0].data.eventoId).toBe(3);
+  });
+
+  it('desvincula o evento quando eventoId é enviado como null', async () => {
+    vi.spyOn(prisma.transacao, 'findFirst').mockResolvedValue({ id: 5, usuarioId: 7, eventoId: 3 });
+    const updateSpy = vi.spyOn(prisma.transacao, 'update').mockResolvedValue({
+      id: 5, usuarioId: 7, tipo: 'receita', valor: new Prisma.Decimal('100.00'), categoria: 'Salário', descricao: '', data: '2026-08-10', eventoId: null,
+    });
+
+    await request(app)
+      .put('/api/transactions/5')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ tipo: 'receita', valor: 100, categoria: 'Salário', data: '2026-08-10', contaId: 1, eventoId: null });
+
+    expect(updateSpy.mock.calls[0][0].data.eventoId).toBeNull();
+  });
+
+  it('rejeita reatribuir a um evento que não pertence à família (400, proteção contra IDOR)', async () => {
+    vi.spyOn(prisma.transacao, 'findFirst').mockResolvedValue({ id: 5, usuarioId: 7, eventoId: null });
+    vi.spyOn(prisma.evento, 'findFirst').mockResolvedValue(null);
+    const updateSpy = vi.spyOn(prisma.transacao, 'update');
+
+    const res = await request(app)
+      .put('/api/transactions/5')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ tipo: 'receita', valor: 100, categoria: 'Salário', data: '2026-08-10', contaId: 1, eventoId: 999 });
+
+    expect(res.status).toBe(400);
+    expect(updateSpy).not.toHaveBeenCalled();
+  });
+
+  it('registra a mudança de evento no histórico', async () => {
+    const existente = { id: 5, usuarioId: 7, tipo: 'receita', valor: new Prisma.Decimal('100.00'), categoria: 'Salário', descricao: '', data: '2026-08-10', contaId: 1, eventoId: null };
+    vi.spyOn(prisma.transacao, 'findFirst').mockResolvedValue(existente);
+    vi.spyOn(prisma.transacao, 'update').mockResolvedValue({ ...existente, eventoId: 1 });
+    const historicoSpy = vi.spyOn(prisma.transacaoHistorico, 'create').mockResolvedValue({});
+
+    await request(app)
+      .put('/api/transactions/5')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ tipo: 'receita', valor: 100, categoria: 'Salário', data: '2026-08-10', contaId: 1, eventoId: 1 });
+
+    expect(historicoSpy).toHaveBeenCalledTimes(1);
+    expect(historicoSpy.mock.calls[0][0].data.alteracoes).toEqual([{ campo: 'eventoId', de: null, para: 1 }]);
   });
 
   it('não cria histórico quando nenhum campo financeiro muda', async () => {

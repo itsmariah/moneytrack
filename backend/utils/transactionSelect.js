@@ -13,6 +13,7 @@ const TRANSACAO_SELECT_SEM_ANEXO = {
   updatedAt: true,
   recorrenciaId: true,
   contaId: true,
+  eventoId: true,
   pluggyTransactionId: true,
   anexoNome: true,
   // Nome de quem lançou — usado no frontend pra mostrar "por Fulano" quando a
@@ -21,6 +22,9 @@ const TRANSACAO_SELECT_SEM_ANEXO = {
   // Moeda da conta (a transação sempre herda a moeda da conta, nunca tem a sua
   // própria) — cada linha é exibida na moeda de origem, nunca convertida individualmente.
   conta: { select: { nome: true, moeda: true } },
+  // Nome/status do evento vinculado (se houver) — pra mostrar a etiqueta na lista sem
+  // round-trip extra; status serve pra rotular "(encerrado)" quando aplicável.
+  evento: { select: { id: true, nome: true, status: true } },
 };
 
 module.exports = { TRANSACAO_SELECT_SEM_ANEXO };

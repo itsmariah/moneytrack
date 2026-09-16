@@ -12,6 +12,8 @@ import Dashboard from './pages/Dashboard'
 import Reports from './pages/Reports'
 import Goals from './pages/Goals'
 import Budgets from './pages/Budgets'
+import Eventos from './pages/Eventos'
+import EventoDetalhe from './pages/EventoDetalhe'
 import Recurring from './pages/Recurring'
 import Contas from './pages/Contas'
 import Categorias from './pages/Categorias'
@@ -33,6 +35,8 @@ export default function App() {
               <Route path="/relatorios" element={<PrivateRoute><Reports /></PrivateRoute>} />
               <Route path="/metas" element={<PrivateRoute><Goals /></PrivateRoute>} />
               <Route path="/orcamentos" element={<PrivateRoute><Budgets /></PrivateRoute>} />
+              <Route path="/eventos" element={<PrivateRoute><Eventos /></PrivateRoute>} />
+              <Route path="/eventos/:id" element={<PrivateRoute><EventoDetalhe /></PrivateRoute>} />
               <Route path="/recorrencias" element={<PrivateRoute><Recurring /></PrivateRoute>} />
               <Route path="/contas" element={<PrivateRoute><Contas /></PrivateRoute>} />
               <Route path="/categorias" element={<PrivateRoute><Categorias /></PrivateRoute>} />

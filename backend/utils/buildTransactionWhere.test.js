@@ -53,4 +53,8 @@ describe('buildTransactionWhere', () => {
   it('adiciona contaId como number quando informado', () => {
     expect(buildTransactionWhere(1, { contaId: '3' })).toEqual({ familiaId: 1, contaId: 3 });
   });
+
+  it('adiciona eventoId como number quando informado', () => {
+    expect(buildTransactionWhere(1, { eventoId: '9' })).toEqual({ familiaId: 1, eventoId: 9 });
+  });
 });

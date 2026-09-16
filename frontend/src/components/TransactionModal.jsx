@@ -15,7 +15,7 @@ function todayLocal() {
   return `${now.getFullYear()}-${mes}-${dia}`
 }
 
-export default function TransactionModal({ transaction, contas, onClose, onSaved }) {
+export default function TransactionModal({ transaction, contas, eventos = [], defaultEventoId, onClose, onSaved }) {
   const { categoriasPorTipo } = useCategorias()
   const [form, setForm] = useState({
     tipo: 'despesa',
@@ -24,6 +24,7 @@ export default function TransactionModal({ transaction, contas, onClose, onSaved
     descricao: '',
     data: todayLocal(),
     contaId: transaction?.contaId || contas?.[0]?.id || '',
+    eventoId: transaction?.eventoId ?? defaultEventoId ?? '',
   })
   const [customCategoria, setCustomCategoria] = useState('')
   const [error, setError] = useState('')
@@ -47,6 +48,7 @@ export default function TransactionModal({ transaction, contas, onClose, onSaved
         descricao: transaction.descricao || '',
         data: transaction.data,
         contaId: transaction.contaId,
+        eventoId: transaction.eventoId ?? '',
       })
       setCustomCategoria(isCustom ? transaction.categoria : '')
       setAnexoAtualNome(transaction.anexoNome || null)
@@ -94,7 +96,7 @@ export default function TransactionModal({ transaction, contas, onClose, onSaved
 
     setLoading(true)
     try {
-      const payload = { ...form, categoria }
+      const payload = { ...form, categoria, eventoId: form.eventoId === '' ? null : Number(form.eventoId) }
       if (novoAnexo) {
         payload.anexo = novoAnexo.dataUrl
         payload.anexoNome = novoAnexo.nome
@@ -193,6 +195,26 @@ export default function TransactionModal({ transaction, contas, onClose, onSaved
               {contas?.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
             </select>
           </div>
+
+          {eventos.length > 0 && (
+            <div className="form-group">
+              <label htmlFor="tx-evento">Evento (opcional)</label>
+              <select
+                id="tx-evento"
+                value={form.eventoId}
+                onChange={e => setForm({ ...form, eventoId: e.target.value })}
+              >
+                <option value="">Nenhum</option>
+                {eventos
+                  .filter(ev => ev.status === 'ativo' || ev.id === transaction?.eventoId)
+                  .map(ev => (
+                    <option key={ev.id} value={ev.id}>
+                      {ev.nome}{ev.status === 'encerrado' ? ' (encerrado)' : ''}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          )}
 
           <div className="form-group">
             <label htmlFor="tx-descricao">Descrição (opcional)</label>

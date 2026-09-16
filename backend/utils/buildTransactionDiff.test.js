@@ -9,6 +9,7 @@ const base = {
   descricao: 'Cinema',
   data: '2026-08-10',
   contaId: 1,
+  eventoId: null,
 };
 
 describe('buildTransactionDiff', () => {
@@ -33,6 +34,11 @@ describe('buildTransactionDiff', () => {
       { campo: 'categoria', de: 'Lazer', para: 'Outros' },
       { campo: 'contaId', de: 1, para: 2 },
     ]);
+  });
+
+  it('detecta vínculo/desvínculo de evento', () => {
+    const diff = buildTransactionDiff(base, { ...base, valor: 50, eventoId: 3 });
+    expect(diff).toEqual([{ campo: 'eventoId', de: null, para: 3 }]);
   });
 
   it('ignora anexo/anexoNome (não fazem parte dos campos rastreados)', () => {
