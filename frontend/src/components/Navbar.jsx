@@ -27,6 +27,7 @@ export default function Navbar() {
         <Link to="/recorrencias" className={isActive('/recorrencias')}>Recorrências</Link>
         <Link to="/categorias" className={isActive('/categorias')}>Categorias</Link>
         <Link to="/familia" className={isActive('/familia')}>Família</Link>
+        <Link to="/grupos" className={isActive('/grupos')}>Grupos</Link>
       </nav>
 
       <div className="navbar-user">

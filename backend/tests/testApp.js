@@ -12,6 +12,7 @@ const categoriasRoutes = require('../routes/categorias');
 const familiaRoutes = require('../routes/familia');
 const cambioRoutes = require('../routes/cambio');
 const eventosRoutes = require('../routes/eventos');
+const gruposRoutes = require('../routes/grupos');
 
 // Réplica mínima da montagem de rotas do server.js, sem helmet/cors/app.listen —
 // os testes de integração só precisam do roteamento + middlewares de cada router.
@@ -31,6 +32,7 @@ function createTestApp() {
   app.use('/api/familia', familiaRoutes);
   app.use('/api/cambio', cambioRoutes);
   app.use('/api/eventos', eventosRoutes);
+  app.use('/api/grupos', gruposRoutes);
   return app;
 }
 

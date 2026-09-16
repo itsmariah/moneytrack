@@ -14,6 +14,8 @@ import Goals from './pages/Goals'
 import Budgets from './pages/Budgets'
 import Eventos from './pages/Eventos'
 import EventoDetalhe from './pages/EventoDetalhe'
+import Grupos from './pages/Grupos'
+import GrupoDetalhe from './pages/GrupoDetalhe'
 import Recurring from './pages/Recurring'
 import Contas from './pages/Contas'
 import Categorias from './pages/Categorias'
@@ -41,6 +43,8 @@ export default function App() {
               <Route path="/contas" element={<PrivateRoute><Contas /></PrivateRoute>} />
               <Route path="/categorias" element={<PrivateRoute><Categorias /></PrivateRoute>} />
               <Route path="/familia" element={<PrivateRoute><Familia /></PrivateRoute>} />
+              <Route path="/grupos" element={<PrivateRoute><Grupos /></PrivateRoute>} />
+              <Route path="/grupos/:id" element={<PrivateRoute><GrupoDetalhe /></PrivateRoute>} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </BrowserRouter>

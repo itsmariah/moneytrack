@@ -36,6 +36,9 @@ model Usuario {
   conexoesBancarias   ConexaoBancaria[]
   categorias          Categoria[]
   eventos             Evento[]
+  grupoMembros        GrupoMembro[]
+  gruposCriados       Grupo[]          @relation("GrupoCriador")
+  despesasGrupoCriadas DespesaGrupo[]  @relation("DespesaGrupoCriador")
 }
 
 // Uma "carteira" compartilhada entre 1+ usuários. Toda visibilidade/posse de dado
@@ -280,6 +283,77 @@ model Evento {
   // Aviso por e-mail já disparado pro teto (orcamento) deste evento — flag única (não um
   // mês como em Orcamento.ultimaNotificacaoMes), porque o evento tem um teto vitalício, não mensal.
   notificacaoEnviada Boolean     @default(false)
+}
+
+// Grupo pra dividir despesas entre várias pessoas e calcular quem deve quem (estilo
+// Splitwise) — conceito bem diferente de Familia: um Usuario pode estar em vários grupos
+// (não em só um) e um grupo pode incluir convidados sem conta (ver GrupoMembro).
+model Grupo {
+  id               Int            @id @default(autoincrement())
+  nome             String
+  // Código curto pra outra pessoa entrar, mesmo padrão de Familia.codigo.
+  codigo           String         @unique
+  criadorUsuarioId Int
+  criador          Usuario        @relation("GrupoCriador", fields: [criadorUsuarioId], references: [id], onDelete: Restrict)
+  createdAt        DateTime       @default(now())
+  membros          GrupoMembro[]
+  despesas         DespesaGrupo[]
+}
+
+// Primeira tabela de associação N:N do projeto — um Usuario pode estar em vários grupos
+// (diferente de Familia, que é 1:1 com Usuario). usuarioId nulo = convidado sem conta,
+// identificado só por nomeConvidado. NULLs não colidem em @@unique no Postgres, então
+// vários convidados (usuarioId null) convivem no mesmo grupo sem violar a constraint —
+// só um Usuario de verdade não pode entrar duas vezes no mesmo grupo.
+model GrupoMembro {
+  id            Int      @id @default(autoincrement())
+  grupoId       Int
+  grupo         Grupo    @relation(fields: [grupoId], references: [id], onDelete: Cascade)
+  usuarioId     Int?
+  usuario       Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  nomeConvidado String?
+  // "admin" | "membro" — admin remove membros, exclui o grupo; qualquer membro lança
+  // despesa e adiciona convidado.
+  papel         String   @default("membro")
+  createdAt     DateTime @default(now())
+  despesasPagas DespesaGrupo[]   @relation("PagoPor")
+  divisoes      DivisaoDespesa[]
+
+  @@unique([grupoId, usuarioId])
+}
+
+model DespesaGrupo {
+  id                 Int              @id @default(autoincrement())
+  grupoId            Int
+  grupo              Grupo            @relation(fields: [grupoId], references: [id], onDelete: Cascade)
+  descricao          String
+  valorTotal         Decimal          @db.Decimal(12, 2)
+  data               String
+  // Restrict (não Cascade/SetNull): impede apagar um GrupoMembro que já pagou alguma
+  // despesa — perderia o histórico de quem realmente desembolsou o dinheiro.
+  pagoPorMembroId    Int
+  pagoPor            GrupoMembro      @relation("PagoPor", fields: [pagoPorMembroId], references: [id], onDelete: Restrict)
+  criadoPorUsuarioId Int
+  criadoPor          Usuario          @relation("DespesaGrupoCriador", fields: [criadoPorUsuarioId], references: [id], onDelete: Restrict)
+  createdAt          DateTime         @default(now())
+  divisoes           DivisaoDespesa[]
+}
+
+// Uma linha por participante de uma despesa, incluindo quem pagou (se ele também fizer
+// parte do rateio) — soma de valorDevido sempre == valorTotal da despesa. O saldo "quem
+// deve quem" (utils/calcularSaldosGrupo.js) ignora a linha do próprio pagador (não deve
+// pra si mesmo); ele nunca é excluído aqui, pra manter esse invariante simples e auditável.
+model DivisaoDespesa {
+  id             Int          @id @default(autoincrement())
+  despesaGrupoId Int
+  despesa        DespesaGrupo @relation(fields: [despesaGrupoId], references: [id], onDelete: Cascade)
+  membroId       Int
+  // Restrict: mesma razão do pagoPor acima — não pode sumir um participante de uma
+  // despesa já lançada sem quebrar a soma histórica.
+  membro         GrupoMembro  @relation(fields: [membroId], references: [id], onDelete: Restrict)
+  valorDevido    Decimal      @db.Decimal(12, 2)
+
+  @@unique([despesaGrupoId, membroId])
 }
 
 // Cotação de câmbio pra converter contas em moeda estrangeira pro total consolidado em
