@@ -99,15 +99,30 @@ O `react-router-dom` cria rotas no frontend — URLs que carregam componentes di
 
 ```jsx
 <Routes>
-  <Route path="/"           element={<Landing />} />
-  <Route path="/login"      element={<Login />} />
-  <Route path="/cadastro"   element={<Register />} />
-  <Route path="/dashboard"  element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-  <Route path="/relatorios" element={<PrivateRoute><Reports /></PrivateRoute>} />
+  <Route path="/"               element={<Landing />} />
+  <Route path="/login"          element={<Login />} />
+  <Route path="/cadastro"       element={<Register />} />
+  <Route path="/esqueci-senha"  element={<ForgotPassword />} />
+  <Route path="/redefinir-senha" element={<ResetPassword />} />
+  <Route path="/dashboard"      element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+  <Route path="/relatorios"     element={<PrivateRoute><Reports /></PrivateRoute>} />
+  <Route path="/metas"          element={<PrivateRoute><Goals /></PrivateRoute>} />
+  <Route path="/orcamentos"     element={<PrivateRoute><Budgets /></PrivateRoute>} />
+  <Route path="/eventos"        element={<PrivateRoute><Eventos /></PrivateRoute>} />
+  <Route path="/eventos/:id"    element={<PrivateRoute><EventoDetalhe /></PrivateRoute>} />
+  <Route path="/recorrencias"   element={<PrivateRoute><Recurring /></PrivateRoute>} />
+  <Route path="/contas"         element={<PrivateRoute><Contas /></PrivateRoute>} />
+  <Route path="/categorias"     element={<PrivateRoute><Categorias /></PrivateRoute>} />
+  <Route path="/familia"        element={<PrivateRoute><Familia /></PrivateRoute>} />
+  <Route path="/grupos"         element={<PrivateRoute><Grupos /></PrivateRoute>} />
+  <Route path="/grupos/:id"     element={<PrivateRoute><GrupoDetalhe /></PrivateRoute>} />
+  <Route path="*" element={<Navigate to="/" replace />} />
 </Routes>
 ```
 
 O `<PrivateRoute>` verifica se o usuário está logado. Se não estiver, redireciona para `/login`.
+
+Todas as rotas privadas (exceto `/`, `/login`, `/cadastro`, `/esqueci-senha` e `/redefinir-senha`) ficam por trás de `<PrivateRoute>` — a lista cresceu bastante desde a versão inicial do projeto (metas, orçamentos, eventos, recorrências, contas, categorias, família e grupos foram todos adicionados depois). Qualquer rota não reconhecida (`*`) volta pra Landing.
 
 ---
 

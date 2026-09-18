@@ -75,7 +75,7 @@ export default function Landing() {
         <div className="about-text">
           <h2>O que é o MoneyTrack?</h2>
           <p>O MoneyTrack é uma aplicação de gestão financeira pessoal criada para ajudar você a entender para onde vai o seu dinheiro. Cadastre receitas e despesas, importe extratos bancários ou sincronize direto com seu banco via Open Finance, e acompanhe o saldo atualizado automaticamente — com insights automáticos, projeção de saldo e gráficos que mostram a evolução dos seus gastos mês a mês.</p>
-          <p>Disponível como aplicação web, acessível de qualquer navegador, como app desktop instalável ou direto no celular via PWA — e pode ser compartilhado com sua família, todo mundo vendo e lançando na mesma carteira.</p>
+          <p>Disponível como aplicação web, acessível de qualquer navegador, como app desktop instalável ou direto no celular via PWA — e pode ser compartilhado com sua família, todo mundo vendo e lançando na mesma carteira. Organize gastos de viagens em eventos, divida despesas com amigos em grupos e mantenha contas em outras moedas, tudo no mesmo lugar.</p>
         </div>
         <div className="browser-frame">
           <div className="browser-frame-bar">
@@ -203,6 +203,21 @@ export default function Landing() {
             <div className="feature-icon">📲</div>
             <h3>Instalável no celular</h3>
             <p>Instale o MoneyTrack direto do navegador do celular, como um app — sem precisar de loja de aplicativos.</p>
+          </div>
+          <div className="feature-card">
+            <div className="feature-icon">✈️</div>
+            <h3>Eventos</h3>
+            <p>Agrupe transações de uma viagem ou ocasião especial, defina um orçamento e acompanhe o gasto total à parte do resto das finanças.</p>
+          </div>
+          <div className="feature-card">
+            <div className="feature-icon">🤝</div>
+            <h3>Grupos (estilo Splitwise)</h3>
+            <p>Divida despesas com amigos, veja quem deve quem calculado automaticamente e quite os saldos direto pelo app.</p>
+          </div>
+          <div className="feature-card">
+            <div className="feature-icon">💱</div>
+            <h3>Multi-moeda</h3>
+            <p>Tenha contas em dólar, euro ou libra com cotação atualizável, e veja o total consolidado em reais no Dashboard.</p>
           </div>
         </div>
       </section>
