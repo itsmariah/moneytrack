@@ -54,20 +54,22 @@ app.listen(3001)
 
 ---
 
-### SQLite
+### PostgreSQL
 
-**O que é:** Banco de dados relacional que armazena dados em um único arquivo `.db`.
+**O que é:** Banco de dados relacional cliente-servidor, um dos mais usados em produção no mundo.
 
-**Por que usamos:** Não requer instalação de um servidor separado (como MySQL ou PostgreSQL). Ideal para projetos acadêmicos, protótipos e aplicações que rodam em uma única máquina.
+**Por que usamos:** O projeto começou com **SQLite** (arquivo local `.db`, zero configuração — ótimo pra prototipar). A troca veio quando o projeto passou a rodar em produção de verdade: o backend no Render não garante disco persistente entre deploys (um arquivo `.db` local se perderia), e múltiplas pessoas passaram a escrever ao mesmo tempo na mesma carteira ("modo família") — SQLite trava o arquivo inteiro a cada escrita, Postgres não. Hospedado gratuitamente no [Neon](https://neon.com) em produção; localmente roda via Docker ou uma instância na nuvem separada (ver [02-como-rodar.md](./02-como-rodar.md)).
 
 **Diferença para outros bancos:**
 | Banco | Tipo | Quando usar |
 |-------|------|-------------|
-| SQLite | Arquivo local | Projetos pequenos, desenvolvimento, acadêmico |
-| MySQL / PostgreSQL | Servidor | Produção com múltiplos usuários simultâneos |
+| SQLite | Arquivo local | Protótipos, apps que rodam numa única máquina |
+| PostgreSQL / MySQL | Servidor | Produção, múltiplos usuários/processos escrevendo ao mesmo tempo |
 | MongoDB | NoSQL | Dados não estruturados, documentos JSON |
 
-**Site:** https://sqlite.org
+**Tipos usados no schema que vale conhecer:** `Decimal(12,2)` para todo valor em dinheiro (evita o erro de arredondamento binário do `Float` — crítico num app financeiro) e `Json` para o histórico de edição de transações (`TransacaoHistorico.alteracoes`).
+
+**Site:** https://www.postgresql.org
 
 ---
 
@@ -118,6 +120,46 @@ app.listen(3001)
 **O que é:** Monitora arquivos do projeto e reinicia o servidor automaticamente quando há mudanças.
 
 **Por que usamos:** Sem o nodemon, seria necessário parar e reiniciar o servidor manualmente a cada alteração no código. O nodemon automatiza isso, acelerando o desenvolvimento.
+
+---
+
+### helmet
+
+**O que é:** Middleware Express que define um conjunto de cabeçalhos HTTP relacionados a segurança (ex: `X-Content-Type-Options`, `X-Frame-Options`) com um valor sensato por padrão.
+
+**Por que usamos:** Reduz superfície de ataque (clickjacking, MIME sniffing) sem precisar configurar cada header manualmente.
+
+**Site:** https://helmetjs.github.io
+
+---
+
+### express-rate-limit
+
+**O que é:** Middleware que limita quantas requisições um mesmo cliente pode fazer numa janela de tempo.
+
+**Por que usamos:** Protege rotas sensíveis (login, cadastro, recuperação de senha, e todas as rotas de dados) contra força bruta e abuso — cada limitador é configurado por rota/grupo de rotas, com uma janela e um teto de requisições.
+
+**Site:** https://github.com/express-rate-limit/express-rate-limit
+
+---
+
+### nodemailer
+
+**O que é:** Biblioteca pra enviar e-mail a partir do Node.js via SMTP.
+
+**Por que usamos:** Dois fluxos do app mandam e-mail: recuperação de senha (link com token) e aviso de orçamento estourado. Configurado via variáveis `SMTP_*` no `.env` — sem elas, o envio falha (mas o resto do app continua funcionando).
+
+**Site:** https://nodemailer.com
+
+---
+
+### pluggy-sdk
+
+**O que é:** SDK oficial da [Pluggy](https://pluggy.ai), um agregador de Open Finance (equivalente brasileiro ao Plaid) que conecta a bancos de verdade.
+
+**Por que usamos:** Implementar a integração direto com cada banco individualmente exigiria credenciar o MoneyTrack junto a cada instituição financeira — inviável para um projeto pessoal. A Pluggy padroniza essa conexão: o usuário autoriza o acesso pelo widget deles (`react-pluggy-connect`, no frontend), e o backend só guarda o identificador da conexão (`pluggyItemId`) — nunca senha nem token de acesso ao banco em si.
+
+**Site:** https://pluggy.ai
 
 ---
 
@@ -206,6 +248,36 @@ const { data } = await api.get('/transactions')
 
 ---
 
+### jsPDF + jspdf-autotable + html2canvas
+
+**O que é:** `jsPDF` gera arquivos PDF direto no navegador; `jspdf-autotable` desenha tabelas formatadas dentro desse PDF; `html2canvas` tira um "print" de um elemento HTML (usado pros gráficos) e converte em imagem pra colar no PDF.
+
+**Por que usamos:** A exportação do relatório mensal em PDF roda **inteiramente no navegador** (`frontend/src/utils/generateReportPdf.js`) — sem endpoint no backend pra isso. Evita gerar/segurar um arquivo temporário no servidor e mantém a geração rápida, já que os dados do relatório já estão carregados na tela.
+
+**Sites:** https://github.com/parallax/jsPDF · https://github.com/simonbengtsson/jsPDF-AutoTable · https://html2canvas.hertzen.com
+
+---
+
+### react-pluggy-connect
+
+**O que é:** Widget React oficial da Pluggy — a tela onde o usuário escolhe o banco e autoriza a conexão.
+
+**Por que usamos:** Em vez de construir esse fluxo de autorização do zero (e lidar com a segurança de credenciais bancárias), o widget cuida de toda a etapa sensível; o MoneyTrack só recebe de volta um identificador de conexão já autorizada.
+
+**Site:** https://github.com/pluggyai/pluggy-connect
+
+---
+
+### vite-plugin-pwa (+ Workbox)
+
+**O que é:** Plugin do Vite que gera o `manifest.webmanifest` e o service worker (via Workbox) necessários pra um site virar instalável como PWA (Progressive Web App).
+
+**Por que usamos:** Deixa o MoneyTrack instalável no celular direto do navegador, sem loja de aplicativo. Configurado só pra cachear o "app shell" (JS/CSS/HTML/ícones) — nenhuma chamada `/api` é cacheada, então o app sempre busca dado real da rede, nunca mostra número desatualizado offline. Ver `frontend/vite.config.js` e `frontend/src/hooks/useInstallPrompt.js` (captura o evento `beforeinstallprompt` do navegador pra mostrar o botão "Instalar no celular").
+
+**Site:** https://vite-pwa-org.netlify.app
+
+---
+
 ## Controle de versão
 
 ### Git
@@ -241,16 +313,22 @@ git pull                # Baixar mudanças do GitHub
 ```json
 {
   "dependencies": {
-    "@prisma/client": "banco de dados",
-    "bcryptjs":       "criptografia de senhas",
-    "cors":           "política de origens cruzadas",
-    "dotenv":         "variáveis de ambiente",
-    "express":        "servidor HTTP",
-    "jsonwebtoken":   "autenticação JWT"
+    "@prisma/client":     "banco de dados",
+    "bcryptjs":           "criptografia de senhas",
+    "cors":               "política de origens cruzadas",
+    "dotenv":             "variáveis de ambiente",
+    "express":            "servidor HTTP",
+    "express-rate-limit": "limite de requisições por rota",
+    "helmet":             "cabeçalhos HTTP de segurança",
+    "jsonwebtoken":       "autenticação JWT",
+    "nodemailer":         "envio de e-mail (senha, orçamento)",
+    "pluggy-sdk":         "integração Open Finance"
   },
   "devDependencies": {
-    "nodemon": "reinício automático em dev",
-    "prisma":  "migrations e geração do client"
+    "nodemon":   "reinício automático em dev",
+    "prisma":    "migrations e geração do client",
+    "supertest": "requisições HTTP nos testes de rota",
+    "vitest":    "runner de testes"
   }
 }
 ```
@@ -259,15 +337,21 @@ git pull                # Baixar mudanças do GitHub
 ```json
 {
   "dependencies": {
-    "axios":            "requisições HTTP",
-    "react":            "biblioteca de UI",
-    "react-dom":        "renderização no navegador",
-    "react-router-dom": "navegação entre páginas",
-    "recharts":         "gráficos"
+    "axios":               "requisições HTTP",
+    "html2canvas":         "captura de gráfico como imagem pro PDF",
+    "jspdf":               "geração de PDF no navegador",
+    "jspdf-autotable":     "tabelas dentro do PDF gerado",
+    "react":               "biblioteca de UI",
+    "react-dom":           "renderização no navegador",
+    "react-pluggy-connect":"widget de conexão Open Finance",
+    "react-router-dom":    "navegação entre páginas",
+    "recharts":            "gráficos"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "suporte a JSX no Vite",
-    "vite":                 "servidor de dev e build"
+    "vite":                 "servidor de dev e build",
+    "vite-plugin-pwa":      "instalação como PWA (manifest + service worker)",
+    "vitest":               "runner de testes"
   }
 }
 ```
