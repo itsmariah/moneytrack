@@ -643,7 +643,7 @@ input[type="month"]::-webkit-calendar-picker-indicator { filter: var(--picker-in
 
 /* ── GRUPOS ── */
 .grupo-saldos-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
-.grupo-saldo-item { font-size: 14px; background: var(--bg3); border-radius: 8px; padding: 10px 14px; }
+.grupo-saldo-item { font-size: 14px; background: var(--bg3); border-radius: 8px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .grupo-despesas-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
 .grupo-despesa-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 10px; background: var(--bg3); border: 1px solid transparent; transition: border-color 0.2s; }
 .grupo-despesa-item:hover { border-color: var(--border); }

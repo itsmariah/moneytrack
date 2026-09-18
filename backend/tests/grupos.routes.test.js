@@ -75,6 +75,7 @@ describe('GET /api/grupos/:id', () => {
         id: 1, grupoId: 1, descricao: 'Jantar', valorTotal: new Prisma.Decimal('90.00'), data: '2026-08-10', pagoPorMembroId: 1, criadoPorUsuarioId: 7, createdAt: new Date(),
         divisoes: [{ membroId: 1, valorDevido: new Prisma.Decimal('45.00') }, { membroId: 2, valorDevido: new Prisma.Decimal('45.00') }],
       }],
+      pagamentos: [],
     });
 
     const res = await request(app).get('/api/grupos/1').set('Authorization', `Bearer ${token}`);
@@ -83,6 +84,27 @@ describe('GET /api/grupos/:id', () => {
     expect(res.body.membros).toHaveLength(2);
     expect(res.body.despesas[0].valorTotal).toBe(90);
     expect(res.body.saldos).toEqual([{ deMembroId: 2, paraMembroId: 1, valor: 45 }]);
+  });
+
+  it('abate os saldos com os pagamentos já registrados', async () => {
+    vi.spyOn(prisma.grupoMembro, 'findFirst').mockResolvedValue(rawMembro());
+    vi.spyOn(prisma.grupo, 'findUnique').mockResolvedValue({
+      ...rawGrupo(),
+      membros: [rawMembro({ id: 1, usuarioId: 7 }), rawMembro({ id: 2, usuarioId: 8, papel: 'membro', usuario: { id: 8, nome: 'Bruno', email: 'b@x.com', foto: null } })],
+      despesas: [{
+        id: 1, grupoId: 1, descricao: 'Jantar', valorTotal: new Prisma.Decimal('90.00'), data: '2026-08-10', pagoPorMembroId: 1, criadoPorUsuarioId: 7, createdAt: new Date(),
+        divisoes: [{ membroId: 1, valorDevido: new Prisma.Decimal('45.00') }, { membroId: 2, valorDevido: new Prisma.Decimal('45.00') }],
+      }],
+      pagamentos: [{
+        id: 1, grupoId: 1, deMembroId: 2, paraMembroId: 1, valor: new Prisma.Decimal('20.00'), data: '2026-08-11', criadoPorUsuarioId: 8, createdAt: new Date(),
+      }],
+    });
+
+    const res = await request(app).get('/api/grupos/1').set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.pagamentos[0].valor).toBe(20);
+    expect(res.body.saldos).toEqual([{ deMembroId: 2, paraMembroId: 1, valor: 25 }]);
   });
 });
 
@@ -180,6 +202,7 @@ describe('POST /api/grupos/:id/sair', () => {
       .mockResolvedValueOnce(2) // totalMembros
       .mockResolvedValueOnce(0); // outrosAdmins
     vi.spyOn(prisma.despesaGrupo, 'findFirst').mockResolvedValue(null);
+    vi.spyOn(prisma.pagamentoGrupo, 'findFirst').mockResolvedValue(null);
     const updateSpy = vi.spyOn(prisma.grupoMembro, 'update').mockResolvedValue({});
     vi.spyOn(prisma.grupoMembro, 'delete').mockResolvedValue({});
 
@@ -207,7 +230,7 @@ describe('DELETE /api/grupos/:id/membros/:membroId', () => {
     const res = await request(app).delete('/api/grupos/1/membros/2').set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/despesas registradas/);
+    expect(res.body.error).toMatch(/despesas ou pagamentos registrados/);
     expect(deleteSpy).not.toHaveBeenCalled();
   });
 
@@ -216,19 +239,36 @@ describe('DELETE /api/grupos/:id/membros/:membroId', () => {
       .mockResolvedValueOnce(rawMembro({ papel: 'admin' }))
       .mockResolvedValueOnce(rawMembro({ id: 2, usuarioId: 8 }));
     vi.spyOn(prisma.despesaGrupo, 'findFirst').mockResolvedValue(null);
+    vi.spyOn(prisma.pagamentoGrupo, 'findFirst').mockResolvedValue(null);
     vi.spyOn(prisma.grupoMembro, 'delete').mockRejectedValue(Object.assign(new Error('FK violation'), { code: 'P2003' }));
 
     const res = await request(app).delete('/api/grupos/1/membros/2').set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/despesas registradas/);
+    expect(res.body.error).toMatch(/despesas ou pagamentos registrados/);
   });
 
-  it('remove o membro quando não tem despesas', async () => {
+  it('retorna 400 amigável quando o membro tem pagamentos registrados (checagem prévia)', async () => {
     vi.spyOn(prisma.grupoMembro, 'findFirst')
       .mockResolvedValueOnce(rawMembro({ papel: 'admin' }))
       .mockResolvedValueOnce(rawMembro({ id: 2, usuarioId: 8 }));
     vi.spyOn(prisma.despesaGrupo, 'findFirst').mockResolvedValue(null);
+    vi.spyOn(prisma.pagamentoGrupo, 'findFirst').mockResolvedValue({ id: 9 });
+    const deleteSpy = vi.spyOn(prisma.grupoMembro, 'delete');
+
+    const res = await request(app).delete('/api/grupos/1/membros/2').set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/pagamentos registrados/);
+    expect(deleteSpy).not.toHaveBeenCalled();
+  });
+
+  it('remove o membro quando não tem despesas nem pagamentos', async () => {
+    vi.spyOn(prisma.grupoMembro, 'findFirst')
+      .mockResolvedValueOnce(rawMembro({ papel: 'admin' }))
+      .mockResolvedValueOnce(rawMembro({ id: 2, usuarioId: 8 }));
+    vi.spyOn(prisma.despesaGrupo, 'findFirst').mockResolvedValue(null);
+    vi.spyOn(prisma.pagamentoGrupo, 'findFirst').mockResolvedValue(null);
     const deleteSpy = vi.spyOn(prisma.grupoMembro, 'delete').mockResolvedValue({});
 
     const res = await request(app).delete('/api/grupos/1/membros/2').set('Authorization', `Bearer ${token}`);
@@ -248,6 +288,7 @@ describe('DELETE /api/grupos/:id', () => {
   it('exclui o grupo quando quem chama é admin', async () => {
     vi.spyOn(prisma.grupoMembro, 'findFirst').mockResolvedValue(rawMembro({ papel: 'admin' }));
     vi.spyOn(prisma.despesaGrupo, 'deleteMany').mockResolvedValue({ count: 0 });
+    vi.spyOn(prisma.pagamentoGrupo, 'deleteMany').mockResolvedValue({ count: 0 });
     const deleteSpy = vi.spyOn(prisma.grupo, 'delete').mockResolvedValue({});
     vi.spyOn(prisma, '$transaction').mockImplementation((arr) => Promise.all(arr));
 
@@ -259,11 +300,12 @@ describe('DELETE /api/grupos/:id', () => {
 
   // Regressão: excluir um grupo que tem despesa dava 500 (erro de FK do Postgres) porque
   // GrupoMembro (onDelete: Cascade a partir de Grupo) podia cascatear antes de as despesas
-  // que apontam pra ele (Restrict) serem apagadas. A correção apaga as despesas primeiro,
-  // numa transação com a exclusão do grupo.
-  it('apaga as despesas do grupo antes do grupo, na mesma transação (evita a corrida Cascade/Restrict)', async () => {
+  // que apontam pra ele (Restrict) serem apagadas. A correção apaga as despesas e os
+  // pagamentos primeiro, numa transação com a exclusão do grupo.
+  it('apaga despesas e pagamentos do grupo antes do grupo, na mesma transação (evita a corrida Cascade/Restrict)', async () => {
     vi.spyOn(prisma.grupoMembro, 'findFirst').mockResolvedValue(rawMembro({ papel: 'admin' }));
     const deleteManySpy = vi.spyOn(prisma.despesaGrupo, 'deleteMany').mockResolvedValue({ count: 2 });
+    const deletePagamentosManySpy = vi.spyOn(prisma.pagamentoGrupo, 'deleteMany').mockResolvedValue({ count: 1 });
     const deleteGrupoSpy = vi.spyOn(prisma.grupo, 'delete').mockResolvedValue({});
     const transactionSpy = vi.spyOn(prisma, '$transaction').mockImplementation((arr) => Promise.all(arr));
 
@@ -272,6 +314,7 @@ describe('DELETE /api/grupos/:id', () => {
     expect(res.status).toBe(204);
     expect(transactionSpy).toHaveBeenCalled();
     expect(deleteManySpy).toHaveBeenCalledWith({ where: { grupoId: 1 } });
+    expect(deletePagamentosManySpy).toHaveBeenCalledWith({ where: { grupoId: 1 } });
     expect(deleteGrupoSpy).toHaveBeenCalledWith({ where: { id: 1 } });
   });
 });
@@ -369,5 +412,87 @@ describe('DELETE /api/grupos/:id/despesas/:despesaId', () => {
 
     expect(res.status).toBe(403);
     expect(deleteSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('POST /api/grupos/:id/pagamentos', () => {
+  it('rejeita quem paga que não é membro do grupo (400, proteção contra IDOR)', async () => {
+    vi.spyOn(prisma.grupoMembro, 'findFirst').mockResolvedValue(rawMembro());
+    vi.spyOn(prisma.grupoMembro, 'findMany').mockResolvedValue([{ id: 1 }, { id: 2 }]);
+    const createSpy = vi.spyOn(prisma.pagamentoGrupo, 'create');
+
+    const res = await request(app)
+      .post('/api/grupos/1/pagamentos')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ deMembroId: 999, paraMembroId: 1, valor: 45, data: '2026-08-11' });
+
+    expect(res.status).toBe(400);
+    expect(createSpy).not.toHaveBeenCalled();
+  });
+
+  it('rejeita pagador e recebedor iguais', async () => {
+    vi.spyOn(prisma.grupoMembro, 'findFirst').mockResolvedValue(rawMembro());
+    vi.spyOn(prisma.grupoMembro, 'findMany').mockResolvedValue([{ id: 1 }, { id: 2 }]);
+    const createSpy = vi.spyOn(prisma.pagamentoGrupo, 'create');
+
+    const res = await request(app)
+      .post('/api/grupos/1/pagamentos')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ deMembroId: 1, paraMembroId: 1, valor: 45, data: '2026-08-11' });
+
+    expect(res.status).toBe(400);
+    expect(createSpy).not.toHaveBeenCalled();
+  });
+
+  it('registra o pagamento no caminho feliz', async () => {
+    vi.spyOn(prisma.grupoMembro, 'findFirst').mockResolvedValue(rawMembro());
+    vi.spyOn(prisma.grupoMembro, 'findMany').mockResolvedValue([{ id: 1 }, { id: 2 }]);
+    const createSpy = vi.spyOn(prisma.pagamentoGrupo, 'create').mockResolvedValue({
+      id: 1, grupoId: 1, deMembroId: 2, paraMembroId: 1, valor: new Prisma.Decimal('45.00'), data: '2026-08-11', criadoPorUsuarioId: 7, createdAt: new Date(),
+    });
+
+    const res = await request(app)
+      .post('/api/grupos/1/pagamentos')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ deMembroId: 2, paraMembroId: 1, valor: 45, data: '2026-08-11' });
+
+    expect(res.status).toBe(201);
+    expect(createSpy.mock.calls[0][0].data).toEqual({
+      grupoId: 1, deMembroId: 2, paraMembroId: 1, valor: 45, data: '2026-08-11', criadoPorUsuarioId: 7,
+    });
+    expect(res.body.valor).toBe(45);
+  });
+});
+
+describe('DELETE /api/grupos/:id/pagamentos/:pagamentoId', () => {
+  it('permite exclusão por quem registrou o pagamento mesmo não sendo admin', async () => {
+    vi.spyOn(prisma.grupoMembro, 'findFirst').mockResolvedValue(rawMembro({ papel: 'membro', usuarioId: 7 }));
+    vi.spyOn(prisma.pagamentoGrupo, 'findFirst').mockResolvedValue({ id: 9, grupoId: 1, criadoPorUsuarioId: 7 });
+    const deleteSpy = vi.spyOn(prisma.pagamentoGrupo, 'delete').mockResolvedValue({});
+
+    const res = await request(app).delete('/api/grupos/1/pagamentos/9').set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(204);
+    expect(deleteSpy).toHaveBeenCalledWith({ where: { id: 9 } });
+  });
+
+  it('retorna 403 pra quem não registrou e não é admin', async () => {
+    vi.spyOn(prisma.grupoMembro, 'findFirst').mockResolvedValue(rawMembro({ papel: 'membro', usuarioId: 7 }));
+    vi.spyOn(prisma.pagamentoGrupo, 'findFirst').mockResolvedValue({ id: 9, grupoId: 1, criadoPorUsuarioId: 8 });
+    const deleteSpy = vi.spyOn(prisma.pagamentoGrupo, 'delete');
+
+    const res = await request(app).delete('/api/grupos/1/pagamentos/9').set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(403);
+    expect(deleteSpy).not.toHaveBeenCalled();
+  });
+
+  it('retorna 404 quando o pagamento não existe', async () => {
+    vi.spyOn(prisma.grupoMembro, 'findFirst').mockResolvedValue(rawMembro({ papel: 'admin' }));
+    vi.spyOn(prisma.pagamentoGrupo, 'findFirst').mockResolvedValue(null);
+
+    const res = await request(app).delete('/api/grupos/1/pagamentos/9').set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(404);
   });
 });

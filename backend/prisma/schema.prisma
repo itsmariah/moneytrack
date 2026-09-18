@@ -39,6 +39,7 @@ model Usuario {
   grupoMembros        GrupoMembro[]
   gruposCriados       Grupo[]          @relation("GrupoCriador")
   despesasGrupoCriadas DespesaGrupo[]  @relation("DespesaGrupoCriador")
+  pagamentosGrupoCriados PagamentoGrupo[] @relation("PagamentoGrupoCriador")
 }
 
 // Uma "carteira" compartilhada entre 1+ usuários. Toda visibilidade/posse de dado
@@ -298,6 +299,7 @@ model Grupo {
   createdAt        DateTime       @default(now())
   membros          GrupoMembro[]
   despesas         DespesaGrupo[]
+  pagamentos       PagamentoGrupo[]
 }
 
 // Primeira tabela de associação N:N do projeto — um Usuario pode estar em vários grupos
@@ -318,6 +320,8 @@ model GrupoMembro {
   createdAt     DateTime @default(now())
   despesasPagas DespesaGrupo[]   @relation("PagoPor")
   divisoes      DivisaoDespesa[]
+  pagamentosFeitos    PagamentoGrupo[] @relation("PagamentoDe")
+  pagamentosRecebidos PagamentoGrupo[] @relation("PagamentoPara")
 
   @@unique([grupoId, usuarioId])
 }
@@ -354,6 +358,26 @@ model DivisaoDespesa {
   valorDevido    Decimal      @db.Decimal(12, 2)
 
   @@unique([despesaGrupoId, membroId])
+}
+
+// Uma quitação registrada entre dois membros — "de" pagou "para" fora do app (dinheiro,
+// Pix, o que for), e isso abate o saldo calculado em utils/calcularSaldosGrupo.js. Mesmo
+// princípio das despesas: nunca persiste o saldo em si, só o evento que o compõe.
+// Restrict nos dois membros, mesma razão do pagoPor/DivisaoDespesa.membro acima: não pode
+// sumir o histórico de quem pagou/recebeu.
+model PagamentoGrupo {
+  id                 Int         @id @default(autoincrement())
+  grupoId            Int
+  grupo              Grupo       @relation(fields: [grupoId], references: [id], onDelete: Cascade)
+  deMembroId         Int
+  de                 GrupoMembro @relation("PagamentoDe", fields: [deMembroId], references: [id], onDelete: Restrict)
+  paraMembroId       Int
+  para               GrupoMembro @relation("PagamentoPara", fields: [paraMembroId], references: [id], onDelete: Restrict)
+  valor              Decimal     @db.Decimal(12, 2)
+  data               String
+  criadoPorUsuarioId Int
+  criadoPor          Usuario     @relation("PagamentoGrupoCriador", fields: [criadoPorUsuarioId], references: [id], onDelete: Restrict)
+  createdAt          DateTime    @default(now())
 }
 
 // Cotação de câmbio pra converter contas em moeda estrangeira pro total consolidado em

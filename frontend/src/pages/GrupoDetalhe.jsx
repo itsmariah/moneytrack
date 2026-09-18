@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import api from '../services/api'
 import Navbar from '../components/Navbar'
 import DespesaGrupoModal from '../components/DespesaGrupoModal'
+import PagamentoGrupoModal from '../components/PagamentoGrupoModal'
 import SaldosGrupo from '../components/SaldosGrupo'
 import ConfirmDialog from '../components/ConfirmDialog'
 import Alert from '../components/Alert'
@@ -22,6 +23,10 @@ export default function GrupoDetalhe() {
   const [showDespesaModal, setShowDespesaModal] = useState(false)
   const [editingDespesa, setEditingDespesa] = useState(null)
   const [deleteDespesaId, setDeleteDespesaId] = useState(null)
+
+  const [pagamentoPrefill, setPagamentoPrefill] = useState(null)
+  const [showPagamentoModal, setShowPagamentoModal] = useState(false)
+  const [deletePagamentoId, setDeletePagamentoId] = useState(null)
 
   const [showConvidadoForm, setShowConvidadoForm] = useState(false)
   const [nomeConvidado, setNomeConvidado] = useState('')
@@ -170,6 +175,34 @@ export default function GrupoDetalhe() {
     }
   }
 
+  const handleQuitarSaldo = (saldo) => {
+    setPagamentoPrefill(saldo)
+    setShowPagamentoModal(true)
+  }
+
+  const handlePagamentoModalClose = () => {
+    setShowPagamentoModal(false)
+    setPagamentoPrefill(null)
+  }
+
+  const handlePagamentoSaved = () => {
+    setToast('Pagamento registrado.')
+    handlePagamentoModalClose()
+    fetchGrupo()
+  }
+
+  const confirmarExcluirPagamento = async () => {
+    const pagamentoId = deletePagamentoId
+    setDeletePagamentoId(null)
+    try {
+      await api.delete(`/grupos/${id}/pagamentos/${pagamentoId}`)
+      setToast('Pagamento excluído.')
+      fetchGrupo()
+    } catch (err) {
+      setError(err.response?.data?.error || 'Não foi possível excluir o pagamento.')
+    }
+  }
+
   return (
     <div className="app-layout">
       <Navbar />
@@ -262,7 +295,39 @@ export default function GrupoDetalhe() {
           <div className="section-header">
             <h3>Quem deve quem</h3>
           </div>
-          <SaldosGrupo saldos={grupo.saldos} membros={grupo.membros} meuMembroId={meuMembro?.id} />
+          <SaldosGrupo saldos={grupo.saldos} membros={grupo.membros} meuMembroId={meuMembro?.id} onQuitar={handleQuitarSaldo} />
+        </div>
+
+        <div className="transactions-section" style={{ marginBottom: 24 }}>
+          <div className="section-header">
+            <h3>Histórico de pagamentos</h3>
+          </div>
+
+          {grupo.pagamentos.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-state-icon">💸</div>
+              <p>Nenhum pagamento registrado ainda.</p>
+            </div>
+          ) : (
+            <ul className="grupo-despesas-list">
+              {grupo.pagamentos.map(p => (
+                <li key={p.id} className="grupo-despesa-item">
+                  <div className="grupo-despesa-info">
+                    <span className="grupo-despesa-desc">
+                      {membroPorId[p.deMembroId]?.nome ?? '—'} pagou {membroPorId[p.paraMembroId]?.nome ?? '—'}
+                    </span>
+                    <span className="tx-meta">{fmtDate(p.data)}</span>
+                  </div>
+                  <div className="grupo-despesa-valor">{fmt(p.valor)}</div>
+                  {(p.criadoPorUsuarioId === user?.id || souAdmin) && (
+                    <div className="tx-actions">
+                      <button className="btn-icon btn-danger" onClick={() => setDeletePagamentoId(p.id)} title="Excluir">🗑️</button>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         <div className="transactions-section">
@@ -350,6 +415,26 @@ export default function GrupoDetalhe() {
           confirmLabel="Excluir"
           onConfirm={confirmarExcluirDespesa}
           onCancel={() => setDeleteDespesaId(null)}
+        />
+      )}
+
+      {showPagamentoModal && (
+        <PagamentoGrupoModal
+          grupoId={id}
+          membros={grupo.membros}
+          prefill={pagamentoPrefill}
+          onClose={handlePagamentoModalClose}
+          onSaved={handlePagamentoSaved}
+        />
+      )}
+
+      {deletePagamentoId !== null && (
+        <ConfirmDialog
+          title="Excluir pagamento"
+          message="Tem certeza que deseja excluir este pagamento? O saldo entre os membros volta a considerar a dívida original. Essa ação não pode ser desfeita."
+          confirmLabel="Excluir"
+          onConfirm={confirmarExcluirPagamento}
+          onCancel={() => setDeletePagamentoId(null)}
         />
       )}
 

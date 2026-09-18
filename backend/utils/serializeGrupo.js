@@ -43,4 +43,29 @@ function serializeDespesasGrupo(despesas) {
   return despesas.map(serializeDespesaGrupo);
 }
 
-module.exports = { serializeGrupoMembro, serializeGrupo, serializeDespesaGrupo, serializeDespesasGrupo };
+// "valor" é Decimal no schema — mesma conversão pra number na borda das outras funções acima.
+function serializePagamentoGrupo(pagamento) {
+  return {
+    id: pagamento.id,
+    grupoId: pagamento.grupoId,
+    deMembroId: pagamento.deMembroId,
+    paraMembroId: pagamento.paraMembroId,
+    valor: Number(pagamento.valor),
+    data: pagamento.data,
+    criadoPorUsuarioId: pagamento.criadoPorUsuarioId,
+    createdAt: pagamento.createdAt,
+  };
+}
+
+function serializePagamentosGrupo(pagamentos) {
+  return pagamentos.map(serializePagamentoGrupo);
+}
+
+module.exports = {
+  serializeGrupoMembro,
+  serializeGrupo,
+  serializeDespesaGrupo,
+  serializeDespesasGrupo,
+  serializePagamentoGrupo,
+  serializePagamentosGrupo,
+};

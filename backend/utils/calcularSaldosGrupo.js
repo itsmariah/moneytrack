@@ -4,8 +4,10 @@
 // cada par de membros que se deve algo aparece como uma aresta bruta própria.
 //
 // despesas: [{ pagoPorMembroId, divisoes: [{ membroId, valorDevido }] }]
+// pagamentos: [{ deMembroId, paraMembroId, valor }] — quitações registradas, abatem o
+// que "de" deve a "para" (mesma aresta bruta das despesas, só com sinal invertido).
 // retorna: [{ deMembroId, paraMembroId, valor }], ordenado por deMembroId/paraMembroId.
-function calcularSaldosGrupo(despesas) {
+function calcularSaldosGrupo(despesas, pagamentos = []) {
   // Acumula em centavos (chave "devedor:credor") pra nunca sofrer drift de ponto
   // flutuante somando muitas despesas ao longo do tempo.
   const centavosPorPar = new Map();
@@ -24,6 +26,12 @@ function calcularSaldosGrupo(despesas) {
       if (divisao.membroId === despesa.pagoPorMembroId) continue;
       add(divisao.membroId, despesa.pagoPorMembroId, Math.round(divisao.valorDevido * 100));
     }
+  }
+
+  for (const pagamento of pagamentos) {
+    membroIds.add(pagamento.deMembroId);
+    membroIds.add(pagamento.paraMembroId);
+    add(pagamento.deMembroId, pagamento.paraMembroId, -Math.round(pagamento.valor * 100));
   }
 
   const idsOrdenados = [...membroIds].sort((a, b) => a - b);

@@ -4,7 +4,8 @@ const prisma = require('../database/db');
 const authMiddleware = require('../middleware/auth');
 const { validateNomeGrupo, validateCodigoGrupo, validateNomeConvidado } = require('../utils/validateGrupo');
 const { validateDespesaGrupoInput } = require('../utils/validateDespesaGrupo');
-const { serializeGrupo, serializeGrupoMembro, serializeDespesaGrupo, serializeDespesasGrupo } = require('../utils/serializeGrupo');
+const { validatePagamentoGrupoInput } = require('../utils/validatePagamentoGrupo');
+const { serializeGrupo, serializeGrupoMembro, serializeDespesaGrupo, serializeDespesasGrupo, serializePagamentoGrupo, serializePagamentosGrupo } = require('../utils/serializeGrupo');
 const { gerarCodigoUnico } = require('../utils/gerarCodigoGrupo');
 const { splitIgualmente } = require('../utils/splitDespesaGrupo');
 const { calcularSaldosGrupo } = require('../utils/calcularSaldosGrupo');
@@ -39,15 +40,20 @@ async function getMembroAtual(grupoId, usuarioId) {
   return prisma.grupoMembro.findFirst({ where: { grupoId, usuarioId } });
 }
 
-// Um membro com despesa registrada (como pagador ou como participante do rateio) não
-// pode ser removido — perderia o histórico de quem gastou o quê. O banco já garante isso
-// via onDelete: Restrict; esta checagem só existe pra devolver uma mensagem amigável em
-// vez de deixar o erro de FK do Postgres estourar como 500 (ver catch do P2003 abaixo).
-async function membroTemDespesas(membroId) {
+// Um membro com despesa registrada (como pagador ou como participante do rateio) ou
+// pagamento registrado (como quem pagou ou quem recebeu) não pode ser removido — perderia
+// o histórico de quem gastou/pagou o quê. O banco já garante isso via onDelete: Restrict;
+// esta checagem só existe pra devolver uma mensagem amigável em vez de deixar o erro de FK
+// do Postgres estourar como 500 (ver catch do P2003 abaixo).
+async function membroTemAtividade(membroId) {
   const despesa = await prisma.despesaGrupo.findFirst({
     where: { OR: [{ pagoPorMembroId: membroId }, { divisoes: { some: { membroId } } }] },
   });
-  return Boolean(despesa);
+  if (despesa) return true;
+  const pagamento = await prisma.pagamentoGrupo.findFirst({
+    where: { OR: [{ deMembroId: membroId }, { paraMembroId: membroId }] },
+  });
+  return Boolean(pagamento);
 }
 
 // Se quem está saindo/sendo removido é o único admin do grupo e sobram outros membros,
@@ -94,11 +100,13 @@ router.get('/:id', async (req, res) => {
       include: {
         ...membrosInclude,
         despesas: { include: { divisoes: true }, orderBy: { data: 'desc' } },
+        pagamentos: { orderBy: { data: 'desc' } },
       },
     });
 
     const despesas = serializeDespesasGrupo(grupo.despesas);
-    res.json({ ...serializeGrupo(grupo), despesas, saldos: calcularSaldosGrupo(despesas) });
+    const pagamentos = serializePagamentosGrupo(grupo.pagamentos);
+    res.json({ ...serializeGrupo(grupo), despesas, pagamentos, saldos: calcularSaldosGrupo(despesas, pagamentos) });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao buscar grupo' });
   }
@@ -184,8 +192,8 @@ router.post('/:id/sair', async (req, res) => {
     if (totalMembros <= 1) {
       return res.status(400).json({ error: 'Você é o único membro deste grupo — exclua o grupo em vez de sair' });
     }
-    if (await membroTemDespesas(meuMembro.id)) {
-      return res.status(400).json({ error: 'Você tem despesas registradas neste grupo e não pode sair — peça pra um admin excluir o grupo, ou edite/exclua suas despesas primeiro' });
+    if (await membroTemAtividade(meuMembro.id)) {
+      return res.status(400).json({ error: 'Você tem despesas ou pagamentos registrados neste grupo e não pode sair — peça pra um admin excluir o grupo, ou edite/exclua suas despesas e pagamentos primeiro' });
     }
 
     await promoverProximoAdminSeNecessario(grupoId, meuMembro.id, meuMembro.papel);
@@ -194,7 +202,7 @@ router.post('/:id/sair', async (req, res) => {
       await prisma.grupoMembro.delete({ where: { id: meuMembro.id } });
     } catch (err) {
       if (err.code === 'P2003') {
-        return res.status(400).json({ error: 'Você tem despesas registradas neste grupo e não pode sair' });
+        return res.status(400).json({ error: 'Você tem despesas ou pagamentos registrados neste grupo e não pode sair' });
       }
       throw err;
     }
@@ -218,8 +226,8 @@ router.delete('/:id/membros/:membroId', async (req, res) => {
     const alvo = await prisma.grupoMembro.findFirst({ where: { id: membroId, grupoId } });
     if (!alvo) return res.status(404).json({ error: 'Membro não encontrado' });
 
-    if (await membroTemDespesas(membroId)) {
-      return res.status(400).json({ error: 'Este membro tem despesas registradas neste grupo e não pode ser removido' });
+    if (await membroTemAtividade(membroId)) {
+      return res.status(400).json({ error: 'Este membro tem despesas ou pagamentos registrados neste grupo e não pode ser removido' });
     }
 
     await promoverProximoAdminSeNecessario(grupoId, alvo.id, alvo.papel);
@@ -228,7 +236,7 @@ router.delete('/:id/membros/:membroId', async (req, res) => {
       await prisma.grupoMembro.delete({ where: { id: membroId } });
     } catch (err) {
       if (err.code === 'P2003') {
-        return res.status(400).json({ error: 'Este membro tem despesas registradas neste grupo e não pode ser removido' });
+        return res.status(400).json({ error: 'Este membro tem despesas ou pagamentos registrados neste grupo e não pode ser removido' });
       }
       throw err;
     }
@@ -238,14 +246,15 @@ router.delete('/:id/membros/:membroId', async (req, res) => {
   }
 });
 
-// Exclui o grupo inteiro — só admin. Apaga as despesas primeiro, explicitamente, antes
-// do grupo: se deixasse tudo por conta da cascata do Prisma (GrupoMembro E DespesaGrupo
-// ambos com onDelete: Cascade a partir de Grupo), o Postgres pode tentar cascatear a
-// exclusão dos GrupoMembro antes de ter apagado as despesas que ainda apontam pra eles —
-// e o Restrict de DespesaGrupo.pagoPor/DivisaoDespesa.membro barra a operação inteira com
-// um erro de FK (confirmado na prática: excluir um grupo com qualquer despesa dava 500).
-// Apagando despesaGrupo antes (o que já cascata suas divisões), quando o Grupo é excluído
-// não sobra nenhuma despesa apontando pra um GrupoMembro, e a cascata dos membros roda limpa.
+// Exclui o grupo inteiro — só admin. Apaga despesas e pagamentos primeiro, explicitamente,
+// antes do grupo: se deixasse tudo por conta da cascata do Prisma (GrupoMembro, DespesaGrupo
+// e PagamentoGrupo todos com onDelete: Cascade a partir de Grupo), o Postgres pode tentar
+// cascatear a exclusão dos GrupoMembro antes de ter apagado as despesas/pagamentos que ainda
+// apontam pra eles — e o Restrict de DespesaGrupo.pagoPor/DivisaoDespesa.membro/PagamentoGrupo.de/para
+// barra a operação inteira com um erro de FK (confirmado na prática: excluir um grupo com
+// qualquer despesa dava 500). Apagando despesaGrupo e pagamentoGrupo antes (a primeira já
+// cascata suas divisões), quando o Grupo é excluído não sobra nada apontando pra um
+// GrupoMembro, e a cascata dos membros roda limpa.
 router.delete('/:id', async (req, res) => {
   try {
     const grupoId = Number(req.params.id);
@@ -255,6 +264,7 @@ router.delete('/:id', async (req, res) => {
 
     await prisma.$transaction([
       prisma.despesaGrupo.deleteMany({ where: { grupoId } }),
+      prisma.pagamentoGrupo.deleteMany({ where: { grupoId } }),
       prisma.grupo.delete({ where: { id: grupoId } }),
     ]);
     res.status(204).send();
@@ -358,6 +368,60 @@ router.delete('/:id/despesas/:despesaId', async (req, res) => {
     res.status(204).send();
   } catch (err) {
     res.status(500).json({ error: 'Erro ao excluir despesa' });
+  }
+});
+
+// Registra uma quitação ("de" pagou "para" fora do app) — qualquer membro pode, mesmo
+// nível de permissão do lançamento de despesa. Sem rota de edição: é uma ação atômica tipo
+// "marquei como pago"; se errou, exclui e registra de novo.
+router.post('/:id/pagamentos', async (req, res) => {
+  try {
+    const grupoId = Number(req.params.id);
+    const meuMembro = await getMembroAtual(grupoId, req.userId);
+    if (!meuMembro) return res.status(404).json({ error: 'Grupo não encontrado' });
+
+    const { deMembroId, paraMembroId, valor, data } = req.body;
+    const membrosDoGrupo = await prisma.grupoMembro.findMany({ where: { grupoId }, select: { id: true } });
+    const membrosValidosIds = new Set(membrosDoGrupo.map(m => m.id));
+
+    const validationError = validatePagamentoGrupoInput(req.body, membrosValidosIds);
+    if (validationError) return res.status(400).json({ error: validationError });
+
+    const pagamento = await prisma.pagamentoGrupo.create({
+      data: {
+        grupoId,
+        deMembroId: Number(deMembroId),
+        paraMembroId: Number(paraMembroId),
+        valor: Number(valor),
+        data,
+        criadoPorUsuarioId: req.userId,
+      },
+    });
+    res.status(201).json(serializePagamentoGrupo(pagamento));
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao registrar pagamento' });
+  }
+});
+
+// Exclui um pagamento (desfaz uma quitação lançada errado) — mesma regra de permissão da
+// exclusão de despesa.
+router.delete('/:id/pagamentos/:pagamentoId', async (req, res) => {
+  try {
+    const grupoId = Number(req.params.id);
+    const pagamentoId = Number(req.params.pagamentoId);
+    const meuMembro = await getMembroAtual(grupoId, req.userId);
+    if (!meuMembro) return res.status(404).json({ error: 'Grupo não encontrado' });
+
+    const existente = await prisma.pagamentoGrupo.findFirst({ where: { id: pagamentoId, grupoId } });
+    if (!existente) return res.status(404).json({ error: 'Pagamento não encontrado' });
+    if (existente.criadoPorUsuarioId !== req.userId && meuMembro.papel !== 'admin') {
+      return res.status(403).json({ error: 'Só quem registrou o pagamento ou um admin do grupo pode excluí-lo' });
+    }
+
+    await prisma.pagamentoGrupo.delete({ where: { id: pagamentoId } });
+    res.status(204).send();
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao excluir pagamento' });
   }
 });
 
